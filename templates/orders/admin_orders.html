@@ -1,0 +1,406 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Order Management - FreshBasket SaaS Admin{% endblock %}
+
+{% block content %}
+<!-- ═══ HEADER: TITLE & SUBTITLE ═══ -->
+<div class="fb-admin-greeting-bar mb-4">
+  <div>
+    <h1 class="fb-admin-greeting-title">Order Management</h1>
+    <p class="fb-admin-greeting-subtitle">
+      Manage customer orders and keep every grocery delivery moving smoothly.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <a href="{% url 'inventory:inventory_list' %}" class="btn rounded-pill px-3 py-2 btn-light border fw-semibold" style="font-size: 13px;">
+      <i class="bi bi-boxes me-1"></i> Check Inventory
+    </a>
+    <a href="{% url 'products:home' %}" target="_blank" class="btn rounded-pill px-3 py-2 btn-outline-secondary fw-semibold" style="font-size: 13px;">
+      <i class="bi bi-shop me-1"></i> Storefront
+    </a>
+  </div>
+</div>
+
+<!-- ═══ 7 SUMMARY METRIC CARDS (ACTUAL DB RECORDS) ═══ -->
+<div class="row g-3 mb-4">
+  <!-- Total Orders -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Total Orders</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: #F4F6F2; color: var(--forest-green);">
+          <i class="bi bi-bag"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-dark mb-0">{{ total_orders }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">All customer checkouts</div>
+    </div>
+  </div>
+
+  <!-- Pending Orders -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Pending</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: #FEF3C7; color: #92400E;">
+          <i class="bi bi-clock-history"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-warning mb-0">{{ pending_orders }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Awaiting confirmation</div>
+    </div>
+  </div>
+
+  <!-- Processing Orders -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Processing</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: #EDE9FE; color: #5B21B6;">
+          <i class="bi bi-box-seam"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold" style="color: #5B21B6;" mb-0>{{ processing_orders }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Being packed in store</div>
+    </div>
+  </div>
+
+  <!-- Out for Delivery -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Out for Delivery</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: #D1FAE5; color: #065F46;">
+          <i class="bi bi-truck"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-success mb-0">{{ out_for_delivery_orders }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">On the road to shopper</div>
+    </div>
+  </div>
+
+  <!-- Delivered Orders -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Delivered</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: var(--sage); color: var(--forest-green);">
+          <i class="bi bi-check2-circle"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold mb-0" style="color: var(--forest-green);">{{ delivered_orders }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Successfully completed</div>
+    </div>
+  </div>
+
+  <!-- Cancelled Orders -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Cancelled</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: #FEE2E2; color: #991B1B;">
+          <i class="bi bi-x-circle"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-danger mb-0">{{ cancelled_orders }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Stock restored</div>
+    </div>
+  </div>
+
+  <!-- Total Revenue -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 h-100" style="background: #FAFDF8; border: 1.5px solid rgba(77,139,101,0.25) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="small fw-bold text-success" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Total Revenue</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: var(--sage); color: var(--forest-green);">
+          <i class="bi bi-currency-rupee"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-success mb-0">₹{{ total_revenue }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Excludes cancellations</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FILTER & SEARCH PANEL ═══ -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: #FAF9F4; border: 1px solid var(--border-color) !important;">
+  <form method="get" class="row g-3 align-items-center">
+    <!-- Search Bar -->
+    <div class="col-lg-3 col-md-6">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0 rounded-start-pill ps-3 text-muted">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" name="q" value="{{ current_q }}" class="form-control bg-white border-start-0 rounded-end-pill py-2"
+               placeholder="Order #, customer, phone..." style="font-size: 13px;">
+      </div>
+    </div>
+
+    <!-- Status Dropdown -->
+    <div class="col-lg-2 col-md-6">
+      <select name="status" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13px; font-weight: 600;">
+        <option value="">All Order Statuses</option>
+        {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if current_status == code %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Sort Dropdown -->
+    <div class="col-lg-2 col-md-4">
+      <select name="sort" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13px; font-weight: 600;">
+        <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Date: Newest First</option>
+        <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>Date: Oldest First</option>
+        <option value="amount_high" {% if current_sort == 'amount_high' %}selected{% endif %}>Amount: High &rarr; Low</option>
+        <option value="amount_low" {% if current_sort == 'amount_low' %}selected{% endif %}>Amount: Low &rarr; High</option>
+      </select>
+    </div>
+
+    <!-- Date From -->
+    <div class="col-lg-2 col-md-4">
+      <input type="date" name="date_from" value="{{ current_date_from }}" class="form-control rounded-pill py-2 border shadow-none"
+             title="Placed from date" style="font-size: 12.5px;">
+    </div>
+
+    <!-- Date To & Submit -->
+    <div class="col-lg-3 col-md-4 d-flex gap-1 justify-content-end">
+      <input type="date" name="date_to" value="{{ current_date_to }}" class="form-control rounded-pill py-2 border shadow-none"
+             title="Placed to date" style="font-size: 12.5px;">
+      <button type="submit" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold"
+              style="background: var(--forest-green); color: var(--white); font-size: 13px;">
+        Filter
+      </button>
+      {% if current_q or current_status or current_sort != 'newest' or current_date_from or current_date_to %}
+        <a href="{% url 'orders:admin_orders' %}" class="btn btn-sm btn-outline-secondary rounded-circle py-2 px-2" title="Reset Filters">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Quick Filter Pills -->
+  <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top" style="border-color: rgba(23,63,53,0.08) !important;">
+    <a href="{% url 'orders:admin_orders' %}" class="fb-filter-pill {% if not current_status %}active{% endif %}">
+      All Orders <span class="badge-count">{{ total_orders }}</span>
+    </a>
+    <a href="{% url 'orders:admin_orders' %}?status=pending" class="fb-filter-pill {% if current_status == 'pending' %}active{% endif %}">
+      <i class="bi bi-clock-history text-warning"></i> Pending <span class="badge-count">{{ pending_orders }}</span>
+    </a>
+    <a href="{% url 'orders:admin_orders' %}?status=confirmed" class="fb-filter-pill {% if current_status == 'confirmed' %}active{% endif %}">
+      <i class="bi bi-patch-check text-info"></i> Confirmed <span class="badge-count">{{ confirmed_orders }}</span>
+    </a>
+    <a href="{% url 'orders:admin_orders' %}?status=processing" class="fb-filter-pill {% if current_status == 'processing' %}active{% endif %}">
+      <i class="bi bi-box-seam" style="color: #5B21B6;"></i> Processing <span class="badge-count">{{ processing_orders }}</span>
+    </a>
+    <a href="{% url 'orders:admin_orders' %}?status=out_for_delivery" class="fb-filter-pill {% if current_status == 'out_for_delivery' %}active{% endif %}">
+      <i class="bi bi-truck text-success"></i> Out for Delivery <span class="badge-count">{{ out_for_delivery_orders }}</span>
+    </a>
+    <a href="{% url 'orders:admin_orders' %}?status=delivered" class="fb-filter-pill {% if current_status == 'delivered' %}active{% endif %}">
+      <i class="bi bi-check2-circle" style="color: var(--forest-green);"></i> Delivered <span class="badge-count">{{ delivered_orders }}</span>
+    </a>
+    <a href="{% url 'orders:admin_orders' %}?status=cancelled" class="fb-filter-pill {% if current_status == 'cancelled' %}active{% endif %}">
+      <i class="bi bi-x-circle text-danger"></i> Cancelled <span class="badge-count">{{ cancelled_orders }}</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══ ORDER MANAGEMENT TABLE CARD ═══ -->
+<div class="fb-admin-table-card">
+  <div class="fb-admin-table-header">
+    <div>
+      <h2 class="fb-admin-table-title">
+        <i class="bi bi-bag-check-fill text-success"></i> Customer Orders Ledger ({{ page_obj.paginator.count }} Orders)
+      </h2>
+      <div class="text-muted small" style="font-size: 12px;">
+        Real-time fulfillment queue with automated inventory reservation commits and delivery dispatch.
+      </div>
+    </div>
+    <div>
+      <span class="badge rounded-pill bg-light text-muted border px-3 py-1 small">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }}
+      </span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle table-hover">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Customer Details</th>
+          <th>Placed Date & Time</th>
+          <th>Product Summary</th>
+          <th>Order Amount</th>
+          <th>Payment</th>
+          <th>Order Status</th>
+          <th class="text-end pe-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <!-- Order ID -->
+          <td>
+            <a href="{% url 'orders:admin_order_detail' order.order_number %}" class="fw-bold text-decoration-none" style="color: var(--forest-green); font-size: 13.5px;">
+              #{{ order.order_number }}
+            </a>
+          </td>
+
+          <!-- Customer Details -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                   style="width: 32px; height: 32px; background: var(--forest-green); font-size: 12px;">
+                {{ order.user.username|first|upper }}
+              </div>
+              <div>
+                <span class="fw-bold text-dark small d-block">{{ order.delivery_full_name|default:order.user.get_full_name|default:order.user.username }}</span>
+                <span class="text-muted" style="font-size: 11px;">
+                  <i class="bi bi-telephone me-1"></i>{{ order.delivery_phone }} · <i class="bi bi-geo-alt me-1"></i>{{ order.delivery_city }}
+                </span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Placed Date & Time -->
+          <td class="text-muted small" style="white-space: nowrap;">
+            <i class="bi bi-calendar-event me-1"></i>{{ order.created_at|date:"M d, Y" }}
+            <span class="d-block text-secondary" style="font-size: 11px;">{{ order.created_at|date:"h:i A" }}</span>
+          </td>
+
+          <!-- Product Summary -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge rounded-pill bg-light text-dark border px-2 py-1 small fw-semibold">
+                {{ order.items.count }} item{% if order.items.count != 1 %}s{% endif %}
+              </span>
+              <span class="text-muted text-truncate" style="font-size: 11.5px; max-width: 220px;" title="{% for item in order.items.all %}{{ item.product_name }} (x{{ item.quantity }}){% if not forloop.last %}, {% endif %}{% endfor %}">
+                {% for item in order.items.all|slice:":2" %}
+                  {{ item.product_name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+                {% if order.items.count > 2 %}<span class="text-secondary fw-semibold">+{{ order.items.count|add:"-2" }} more</span>{% endif %}
+              </span>
+            </div>
+          </td>
+
+          <!-- Order Amount -->
+          <td>
+            <span class="fw-bold fs-6 text-dark">₹{{ order.total_amount }}</span>
+            <span class="d-block text-muted" style="font-size: 10.5px;">fee: ₹{{ order.delivery_fee }}</span>
+          </td>
+
+          <!-- Payment -->
+          <td>
+            <div>
+              <span class="badge bg-light text-secondary border rounded-pill px-2 py-1 small" style="font-size: 11px;">
+                {{ order.get_payment_method_display }}
+              </span>
+              {% if order.payment %}
+                {% if order.payment.status == 'paid' %}
+                  <span class="d-block text-success fw-semibold mt-1" style="font-size: 10px;"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
+                {% else %}
+                  <span class="d-block text-warning fw-semibold mt-1" style="font-size: 10px;"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Order Status Badge -->
+          <td>
+            {% if order.status == 'pending' %}
+              <span class="badge badge-order-pending rounded-pill px-3 py-1 small fw-semibold">
+                <i class="bi bi-clock-history me-1"></i> Pending
+              </span>
+            {% elif order.status == 'confirmed' %}
+              <span class="badge badge-order-confirmed rounded-pill px-3 py-1 small fw-semibold">
+                <i class="bi bi-patch-check me-1"></i> Confirmed
+              </span>
+            {% elif order.status == 'processing' %}
+              <span class="badge badge-order-processing rounded-pill px-3 py-1 small fw-semibold">
+                <i class="bi bi-box-seam me-1"></i> Processing
+              </span>
+            {% elif order.status == 'out_for_delivery' %}
+              <span class="badge badge-order-out-for-delivery rounded-pill px-3 py-1 small fw-semibold">
+                <i class="bi bi-truck me-1"></i> Out for Delivery
+              </span>
+            {% elif order.status == 'delivered' %}
+              <span class="badge badge-order-delivered rounded-pill px-3 py-1 small fw-semibold">
+                <i class="bi bi-check2-circle me-1"></i> Delivered
+              </span>
+            {% elif order.status == 'cancelled' %}
+              <span class="badge badge-order-cancelled rounded-pill px-3 py-1 small fw-semibold">
+                <i class="bi bi-x-circle me-1"></i> Cancelled
+              </span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1 small">{{ order.get_status_display }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td class="text-end pe-4">
+            <a href="{% url 'orders:admin_order_detail' order.order_number %}"
+               class="btn btn-sm rounded-pill px-3 py-1 fw-semibold shadow-sm"
+               style="background: var(--forest-green); color: var(--white); border: none; font-size: 12px;">
+              <i class="bi bi-sliders2 me-1"></i> Manage
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center py-5">
+            <div class="p-4 text-center">
+              <i class="bi bi-basket2 text-muted" style="font-size: 48px; opacity: 0.4;"></i>
+              <h5 class="fw-bold text-dark mt-2 mb-1">No Orders Found</h5>
+              <p class="text-muted small mb-0">No customer checkout orders match your current query or status filters.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  {% if page_obj.has_other_pages %}
+  <div class="p-3 border-top d-flex justify-content-between align-items-center" style="background: #FAF9F4;">
+    <div class="small text-muted">
+      Showing <strong>{{ page_obj.start_index }}</strong> to <strong>{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> orders
+    </div>
+    <nav aria-label="Orders pagination">
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link rounded-pill px-3 me-1" href="?page={{ page_obj.previous_page_number }}&status={{ current_status }}&q={{ current_q }}&sort={{ current_sort }}&date_from={{ current_date_from }}&date_to={{ current_date_to }}">
+              &laquo; Previous
+            </a>
+          </li>
+        {% endif %}
+        
+        {% for p_num in page_obj.paginator.page_range %}
+          {% if p_num == page_obj.number %}
+            <li class="page-item active">
+              <span class="page-link rounded-circle mx-1" style="background: var(--forest-green); border-color: var(--forest-green);">{{ p_num }}</span>
+            </li>
+          {% elif p_num > page_obj.number|add:"-3" and p_num < page_obj.number|add:"3" %}
+            <li class="page-item">
+              <a class="page-link rounded-circle mx-1" href="?page={{ p_num }}&status={{ current_status }}&q={{ current_q }}&sort={{ current_sort }}&date_from={{ current_date_from }}&date_to={{ current_date_to }}">{{ p_num }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link rounded-pill px-3 ms-1" href="?page={{ page_obj.next_page_number }}&status={{ current_status }}&q={{ current_q }}&sort={{ current_sort }}&date_from={{ current_date_from }}&date_to={{ current_date_to }}">
+              Next &raquo;
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,374 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}{{ action }} Product - FreshBasket SaaS Admin{% endblock %}
+
+{% block content %}
+<!-- ═══ BREADCRUMB & HEADER ═══ -->
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2" style="font-size: 13px;">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard:home' %}" class="text-decoration-none text-muted">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'dashboard:product_management' %}" class="text-decoration-none" style="color: var(--fresh-green);">Products</a></li>
+      <li class="breadcrumb-item active text-dark fw-semibold" aria-current="page">{{ action }} Product</li>
+    </ol>
+  </nav>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <h1 class="fb-admin-greeting-title mb-1">{{ action }} Product</h1>
+      <p class="fb-admin-greeting-subtitle mb-0">
+        {% if action == 'Add' %}
+          Register a new fresh grocery item into store catalog and warehouse inventory.
+        {% else %}
+          Update specifications, pricing, imagery, and inventory alert parameters for <strong>{{ product.name }}</strong>.
+        {% endif %}
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'dashboard:product_management' %}" class="btn rounded-pill px-3 py-2 btn-outline-secondary" style="font-size: 13px; font-weight: 600;">
+        <i class="bi bi-arrow-left me-1"></i> Back to Products
+      </a>
+      {% if product %}
+      <a href="{% url 'products:product_detail' product.slug %}" target="_blank" class="btn rounded-pill px-3 py-2 btn-light border" style="font-size: 13px; font-weight: 600;">
+        <i class="bi bi-eye me-1"></i> View Live Item
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Form Errors Alert if any -->
+{% if form.errors %}
+<div class="alert alert-danger border-0 rounded-4 shadow-sm mb-4 p-3" role="alert">
+  <div class="d-flex align-items-center gap-2 fw-bold mb-1">
+    <i class="bi bi-exclamation-octagon-fill"></i> Please correct the following errors:
+  </div>
+  <ul class="mb-0 small ps-3">
+    {% for field in form %}
+      {% for error in field.errors %}
+        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+      {% endfor %}
+    {% endfor %}
+    {% for error in form.non_field_errors %}
+      <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- ═══ EDITORIAL PRODUCT FORM ═══ -->
+<form method="post" enctype="multipart/form-data" id="productForm">
+  {% csrf_token %}
+  <div class="row g-4">
+    <!-- LEFT COLUMN: Main Product Details & Pricing (8 cols) -->
+    <div class="col-lg-8">
+      <!-- Card 1: Core Details -->
+      <div class="fb-admin-form-card mb-4">
+        <div class="fb-form-section-title">
+          <i class="bi bi-info-circle text-success"></i> Basic Product Information
+        </div>
+        <div class="fb-form-section-subtitle">
+          Essential details displayed on the customer product card and storefront search.
+        </div>
+
+        <div class="row g-3">
+          <!-- Product Name -->
+          <div class="col-12">
+            <label class="form-label small fw-bold text-dark">Product Name <span class="text-danger">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Category -->
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-dark">Category Taxonomy <span class="text-danger">*</span></label>
+            {{ form.category }}
+            {% if form.category.errors %}<div class="text-danger small mt-1">{{ form.category.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Brand -->
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-dark">Brand / Producer</label>
+            {{ form.brand }}
+            {% if form.brand.errors %}<div class="text-danger small mt-1">{{ form.brand.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Description -->
+          <div class="col-12">
+            <label class="form-label small fw-bold text-dark">Editorial Description</label>
+            {{ form.description }}
+            <div class="form-text" style="font-size: 11px;">Highlight origin, freshness attributes, storage recommendations, and usage.</div>
+            {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Pricing & Packaging Specifications -->
+      <div class="fb-admin-form-card">
+        <div class="fb-form-section-title">
+          <i class="bi bi-currency-rupee text-success"></i> Pricing & Inventory Rules
+        </div>
+        <div class="fb-form-section-subtitle">
+          Configure selling price, packaging units, and automated safety stock alert thresholds.
+        </div>
+
+        <div class="row g-3">
+          <!-- Price -->
+          <div class="col-md-4">
+            <label class="form-label small fw-bold text-dark">Selling Price (₹) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text bg-light text-muted fw-bold">₹</span>
+              {{ form.price }}
+            </div>
+            {% if form.price.errors %}<div class="text-danger small mt-1">{{ form.price.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Unit -->
+          <div class="col-md-4">
+            <label class="form-label small fw-bold text-dark">Unit Measure <span class="text-danger">*</span></label>
+            {{ form.unit }}
+            {% if form.unit.errors %}<div class="text-danger small mt-1">{{ form.unit.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Unit Quantity -->
+          <div class="col-md-4">
+            <label class="form-label small fw-bold text-dark">Unit Quantity <span class="text-danger">*</span></label>
+            {{ form.unit_quantity }}
+            <div class="form-text" style="font-size: 11px;">e.g., 1 for 1 kg, 500 for 500 g</div>
+            {% if form.unit_quantity.errors %}<div class="text-danger small mt-1">{{ form.unit_quantity.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Low Stock Threshold -->
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-dark">Safety Stock Threshold</label>
+            {{ form.low_stock_threshold }}
+            <div class="form-text" style="font-size: 11px;">Trigger Low Stock alert badge when physical inventory drops to or below this number.</div>
+            {% if form.low_stock_threshold.errors %}<div class="text-danger small mt-1">{{ form.low_stock_threshold.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Initial Stock (Only for Add) -->
+          {% if action == 'Add' %}
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-dark">Initial Warehouse Stock</label>
+            {{ form.initial_stock }}
+            <div class="form-text" style="font-size: 11px;">Starting inventory balance automatically logged in the audit ledger.</div>
+            {% if form.initial_stock.errors %}<div class="text-danger small mt-1">{{ form.initial_stock.errors.0 }}</div>{% endif %}
+          </div>
+          {% else %}
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-muted">Current Stock Status</label>
+            <div class="p-2 px-3 rounded-3 bg-light border d-flex align-items-center justify-content-between">
+              <div>
+                <span class="small text-muted d-block">Physical / Available</span>
+                <span class="fw-bold text-dark">{{ product.inventory.physical_stock|default:0 }} / {{ product.inventory.available_stock|default:0 }} {{ product.get_unit_display }}</span>
+              </div>
+              <a href="{% url 'inventory:inventory_list' %}" class="btn btn-sm btn-outline-success rounded-pill px-3" style="font-size: 11.5px;">
+                Restock in Inventory
+              </a>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Photography Upload & Controls (4 cols) -->
+    <div class="col-lg-4">
+      <!-- Card 3: Product Photography Dropzone -->
+      <div class="fb-admin-form-card mb-4">
+        <div class="fb-form-section-title">
+          <i class="bi bi-camera text-success"></i> Product Photography
+        </div>
+        <div class="fb-form-section-subtitle">
+          Clean studio shot with white or warm cream background.
+        </div>
+
+        <!-- Current Image (if editing) -->
+        {% if product.image %}
+        <div class="mb-3 p-3 rounded-4 bg-light border text-center position-relative" id="currentImageContainer">
+          <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle position-absolute top-0 start-50 translate-middle" style="font-size: 11px;">
+            Current Active Image
+          </span>
+          <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded-3 mt-2 shadow-sm" style="max-height: 140px; object-fit: contain;">
+          <div class="small text-muted mt-2" style="font-size: 11px;">Upload a new image below to replace</div>
+        </div>
+        {% endif %}
+
+        <!-- Interactive Drag & Drop Zone -->
+        <div class="fb-admin-dropzone" id="dropzoneBox">
+          <div class="fb-admin-dropzone-icon">
+            <i class="bi bi-cloud-arrow-up"></i>
+          </div>
+          <div class="fw-bold text-dark mb-1" style="font-size: 14px;">Drag & drop photo here</div>
+          <div class="text-muted small mb-3" style="font-size: 12px;">or browse from your computer</div>
+          
+          <button type="button" class="btn btn-sm rounded-pill px-3 py-1 btn-outline-success fw-semibold" id="browseFileBtn" style="font-size: 12px;">
+            <i class="bi bi-folder2-open me-1"></i> Choose File
+          </button>
+          
+          <div class="mt-2 text-muted" style="font-size: 11px;">Supports JPG, PNG, WEBP (Max 5MB)</div>
+
+          <!-- Hidden Original Input -->
+          <div style="opacity: 0; position: absolute; pointer-events: none; height: 0; width: 0;">
+            {{ form.image }}
+          </div>
+        </div>
+
+        <!-- Live Preview Box (Dynamically Revealed upon file pick) -->
+        <div id="imagePreviewBox" class="fb-preview-container d-none">
+          <img src="#" alt="Preview" id="previewImg" class="fb-preview-img">
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="fw-semibold text-dark text-truncate small" id="previewFileName">filename.jpg</div>
+            <div class="text-muted" style="font-size: 11px;" id="previewFileSize">0 KB</div>
+            <span class="badge rounded-pill bg-success-subtle text-success small mt-1" style="font-size: 10px;">Ready to upload</span>
+          </div>
+          <button type="button" class="btn btn-sm btn-link text-danger p-0" id="clearPreviewBtn" title="Remove image">
+            <i class="bi bi-trash3-fill fs-5"></i>
+          </button>
+        </div>
+
+        {% if form.image.errors %}
+          <div class="text-danger small mt-2">{{ form.image.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      <!-- Card 4: Visibility & Merchandising -->
+      <div class="fb-admin-form-card mb-4">
+        <div class="fb-form-section-title">
+          <i class="bi bi-sliders2 text-success"></i> Merchandising & Status
+        </div>
+        <div class="fb-form-section-subtitle">
+          Control availability and storefront prominence.
+        </div>
+
+        <!-- Active Switch -->
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-light border mb-3">
+          <div>
+            <div class="fw-bold text-dark small">Active in Storefront</div>
+            <div class="text-muted" style="font-size: 11px;">Allow shoppers to search and purchase this item</div>
+          </div>
+          <div class="form-check form-switch mb-0">
+            {{ form.is_active }}
+          </div>
+        </div>
+
+        <!-- Featured Switch -->
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-light border">
+          <div>
+            <div class="fw-bold text-dark small">Featured Product</div>
+            <div class="text-muted" style="font-size: 11px;">Showcase in top picks and editorial carousels</div>
+          </div>
+          <div class="form-check form-switch mb-0">
+            {{ form.is_featured }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5: Actions -->
+      <div class="fb-admin-form-card text-center">
+        <button type="submit" class="btn w-100 rounded-pill py-2 mb-2 fw-semibold shadow-sm"
+                style="background: var(--forest-green); color: var(--white); border: none; font-size: 14.5px;">
+          <i class="bi bi-check-circle me-1"></i> {{ action }} Product
+        </button>
+        <a href="{% url 'dashboard:product_management' %}" class="btn w-100 rounded-pill py-2 btn-outline-secondary" style="font-size: 13px; font-weight: 600;">
+          Cancel & Return
+        </a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- ═══ INTERACTIVE DRAG & DROP AND PREVIEW JAVASCRIPT ═══ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const dropzoneBox = document.getElementById('dropzoneBox');
+  const browseFileBtn = document.getElementById('browseFileBtn');
+  // Django's file input generated inside {{ form.image }}
+  const fileInput = document.querySelector('input[type="file"][name="image"]');
+  const previewBox = document.getElementById('imagePreviewBox');
+  const previewImg = document.getElementById('previewImg');
+  const previewFileName = document.getElementById('previewFileName');
+  const previewFileSize = document.getElementById('previewFileSize');
+  const clearPreviewBtn = document.getElementById('clearPreviewBtn');
+
+  if (!fileInput) return;
+
+  // Clicking Browse button triggers the hidden file input
+  if (browseFileBtn) {
+    browseFileBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      fileInput.click();
+    });
+  }
+
+  // Clicking dropzone triggers file picker unless clicking button
+  if (dropzoneBox) {
+    dropzoneBox.addEventListener('click', function(e) {
+      if (e.target !== browseFileBtn && !browseFileBtn.contains(e.target)) {
+        fileInput.click();
+      }
+    });
+
+    // Drag events
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzoneBox.addEventListener(eventName, function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzoneBox.classList.add('dragover');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzoneBox.addEventListener(eventName, function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzoneBox.classList.remove('dragover');
+      }, false);
+    });
+
+    // Drop handler
+    dropzoneBox.addEventListener('drop', function(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files && files.length > 0) {
+        fileInput.files = files;
+        handleFileSelect(files[0]);
+      }
+    }, false);
+  }
+
+  // Input change handler
+  fileInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+      handleFileSelect(this.files[0]);
+    }
+  });
+
+  function handleFileSelect(file) {
+    if (!file.type.match('image.*')) {
+      alert('Please select an image file (PNG, JPG, WEBP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      previewImg.src = e.target.result;
+      previewFileName.textContent = file.name;
+      const sizeKb = (file.size / 1024).toFixed(1);
+      previewFileSize.textContent = sizeKb > 1024 ? (sizeKb / 1024).toFixed(1) + ' MB' : sizeKb + ' KB';
+      previewBox.classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Clear preview
+  if (clearPreviewBtn) {
+    clearPreviewBtn.addEventListener('click', function() {
+      fileInput.value = '';
+      previewImg.src = '#';
+      previewBox.classList.add('d-none');
+    });
+  }
+});
+</script>
+{% endblock %}

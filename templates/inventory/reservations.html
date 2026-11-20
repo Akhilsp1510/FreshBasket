@@ -1,0 +1,246 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Stock Reservations & Cart Holds - FreshBasket SaaS{% endblock %}
+
+{% block content %}
+<!-- ═══ HEADER: TITLE & CONTROLS ═══ -->
+<div class="fb-admin-greeting-bar mb-4">
+  <div>
+    <h1 class="fb-admin-greeting-title">Stock Reservations & Cart Holds</h1>
+    <p class="fb-admin-greeting-subtitle">
+      Inspect live 10-minute temporary checkout holds that prevent overselling and track automated cart expirations.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <!-- Manual Expiry Trigger -->
+    <form method="post" action="{% url 'inventory:expire_reservations' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn rounded-pill px-3 py-2 btn-outline-warning fw-semibold shadow-none" style="font-size: 13px;">
+        <i class="bi bi-clock-history me-1"></i> Run Expiry Engine
+      </button>
+    </form>
+    <a href="{% url 'inventory:inventory_list' %}" class="btn rounded-pill px-3 py-2 btn-outline-secondary fw-semibold" style="font-size: 13px;">
+      <i class="bi bi-arrow-left me-1"></i> Inventory Ledger
+    </a>
+  </div>
+</div>
+
+<!-- ═══ FILTER & STATS BAR ═══ -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: #FAF9F4; border: 1px solid var(--border-color) !important;">
+  <form method="get" class="row g-3 align-items-center">
+    <!-- Search Bar -->
+    <div class="col-lg-6 col-md-8">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0 rounded-start-pill ps-3 text-muted">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" name="q" value="{{ current_q }}" class="form-control bg-white border-start-0 rounded-end-pill py-2"
+               placeholder="Search by customer username, email, or product name..." style="font-size: 13.5px;">
+      </div>
+    </div>
+
+    <!-- Status Selector -->
+    <div class="col-lg-4 col-md-4">
+      <select name="status" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13px; font-weight: 600;">
+        <option value="active" {% if current_status == 'active' %}selected{% endif %}>Active Holds Only ({{ active_count }})</option>
+        <option value="confirmed" {% if current_status == 'confirmed' %}selected{% endif %}>Confirmed Sales ({{ confirmed_count }})</option>
+        <option value="expired" {% if current_status == 'expired' %}selected{% endif %}>Expired Holds ({{ expired_count }})</option>
+        <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Cancelled Holds ({{ cancelled_count }})</option>
+        <option value="all" {% if current_status == 'all' %}selected{% endif %}>All Records ({{ total_count }})</option>
+      </select>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="col-lg-2 col-12 d-flex gap-1 justify-content-end">
+      <button type="submit" class="btn btn-sm rounded-pill px-4 py-2 fw-semibold w-100"
+              style="background: var(--forest-green); color: var(--white); font-size: 13px;">
+        Filter
+      </button>
+      {% if current_q or current_status != 'active' %}
+        <a href="{% url 'inventory:reservations' %}" class="btn btn-sm btn-outline-secondary rounded-circle py-2 px-2" title="Reset Filters">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Quick Filter Pills Strip -->
+  <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top" style="border-color: rgba(23,63,53,0.08) !important;">
+    <a href="{% url 'inventory:reservations' %}?status=active" class="fb-filter-pill {% if current_status == 'active' %}active{% endif %}">
+      <i class="bi bi-lock-fill text-info"></i> Active Holds <span class="badge-count">{{ active_count }}</span>
+    </a>
+    <a href="{% url 'inventory:reservations' %}?status=confirmed" class="fb-filter-pill {% if current_status == 'confirmed' %}active{% endif %}">
+      <i class="bi bi-check-circle-fill text-success"></i> Confirmed Orders <span class="badge-count">{{ confirmed_count }}</span>
+    </a>
+    <a href="{% url 'inventory:reservations' %}?status=expired" class="fb-filter-pill {% if current_status == 'expired' %}active{% endif %}">
+      <i class="bi bi-clock-history text-warning"></i> Expired Holds <span class="badge-count">{{ expired_count }}</span>
+    </a>
+    <a href="{% url 'inventory:reservations' %}?status=cancelled" class="fb-filter-pill {% if current_status == 'cancelled' %}active{% endif %}">
+      <i class="bi bi-x-circle text-danger"></i> Cancelled <span class="badge-count">{{ cancelled_count }}</span>
+    </a>
+    <a href="{% url 'inventory:reservations' %}?status=all" class="fb-filter-pill {% if current_status == 'all' %}active{% endif %}">
+      All History <span class="badge-count">{{ total_count }}</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══ RESERVATIONS TABLE CARD ═══ -->
+<div class="fb-admin-table-card">
+  <div class="fb-admin-table-header">
+    <div>
+      <h2 class="fb-admin-table-title">
+        <i class="bi bi-shield-lock text-success"></i> Stock Reservation Ledger ({{ reservations.count }} Entries)
+      </h2>
+      <div class="text-muted small" style="font-size: 12px;">
+        Every active hold automatically releases reserved units if the shopper does not complete checkout within 10 minutes.
+      </div>
+    </div>
+    <div>
+      <span class="badge rounded-pill bg-light text-muted border px-3 py-1 small">
+        <i class="bi bi-hourglass-split me-1"></i> Standard Window: 10 mins
+      </span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle table-hover">
+      <thead>
+        <tr>
+          <th>Hold ID</th>
+          <th>Customer Account</th>
+          <th>Grocery Item</th>
+          <th class="text-center">Quantity Held</th>
+          <th>Reserved At</th>
+          <th>Expires At / Status</th>
+          <th>Reservation State</th>
+          <th class="text-end pe-4">Admin Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for res in reservations %}
+        <tr>
+          <!-- Hold ID -->
+          <td>
+            <span class="badge bg-light text-dark border rounded-pill px-2 py-1 font-monospace small">
+              #{{ res.id }}
+            </span>
+          </td>
+
+          <!-- Customer Info -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                   style="width: 32px; height: 32px; background: var(--forest-green); font-size: 12px;">
+                {{ res.user.username|first|upper }}
+              </div>
+              <div>
+                <span class="fw-bold text-dark small d-block">{{ res.user.username }}</span>
+                <span class="text-muted" style="font-size: 11px;">{{ res.user.email|default:"No email provided" }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Product Info -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-3 border bg-light p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                {% if res.product.image %}
+                  <img src="{{ res.product.image.url }}" alt="{{ res.product.name }}" class="w-100 h-100 object-fit-contain rounded-2">
+                {% else %}
+                  <i class="bi bi-bag text-muted"></i>
+                {% endif %}
+              </div>
+              <div>
+                <span class="fw-bold text-dark small d-block">{{ res.product.name }}</span>
+                <span class="text-muted" style="font-size: 11px;">{{ res.product.category.name }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Quantity Held -->
+          <td class="text-center">
+            <span class="badge rounded-pill px-3 py-1 fs-6 fw-bold" style="background: rgba(13,202,240,0.12); color: #087990; border: 1px solid rgba(13,202,240,0.25);">
+              {{ res.quantity }} {{ res.product.get_unit_display }}
+            </span>
+          </td>
+
+          <!-- Created At -->
+          <td class="text-muted small" style="white-space: nowrap;">
+            <i class="bi bi-calendar-event me-1"></i>{{ res.created_at|date:"M d, Y" }}
+            <span class="d-block text-secondary" style="font-size: 11px;">{{ res.created_at|date:"h:i:s A" }}</span>
+          </td>
+
+          <!-- Expires At -->
+          <td class="small" style="white-space: nowrap;">
+            {% if res.status == 'active' %}
+              {% if res.is_expired %}
+                <span class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>Expired {{ res.expires_at|timesince }} ago</span>
+                <span class="d-block text-muted" style="font-size: 10px;">Pending automatic release</span>
+              {% else %}
+                <span class="text-success fw-bold"><i class="bi bi-stopwatch me-1"></i>{{ res.expires_at|timeuntil }} left</span>
+                <span class="d-block text-muted" style="font-size: 10px;">Expires at {{ res.expires_at|date:"h:i:s A" }}</span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted">{{ res.expires_at|date:"M d, h:i A" }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Status Badge -->
+          <td>
+            {% if res.status == 'active' %}
+              {% if res.is_expired %}
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1 small">
+                  <i class="bi bi-hourglass-bottom me-1"></i> Expired (Stale)
+                </span>
+              {% else %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 small">
+                  <i class="bi bi-lock-fill me-1"></i> Active Hold
+                </span>
+              {% endif %}
+            {% elif res.status == 'confirmed' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                <i class="bi bi-check-circle-fill me-1"></i> Confirmed (Purchased)
+              </span>
+            {% elif res.status == 'expired' %}
+              <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1 small">
+                <i class="bi bi-clock-history me-1"></i> Expired
+              </span>
+            {% elif res.status == 'cancelled' %}
+              <span class="badge bg-danger-subtle text-danger rounded-pill px-2 py-1 small">
+                <i class="bi bi-x-circle me-1"></i> Cancelled
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td class="text-end pe-4">
+            {% if res.status == 'active' %}
+              <form method="post" action="{% url 'inventory:cancel_reservation' res.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" style="font-size: 11.5px;"
+                        onclick="return confirm('Release this reservation and return {{ res.quantity }} units of {{ res.product.name|escapejs }} back to available stock?')">
+                  <i class="bi bi-unlock me-1"></i> Release Hold
+                </button>
+              </form>
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center py-5">
+            <div class="p-4 text-center">
+              <i class="bi bi-basket2 text-muted" style="font-size: 48px; opacity: 0.4;"></i>
+              <h5 class="fw-bold text-dark mt-2 mb-1">No Stock Reservations Found</h5>
+              <p class="text-muted small mb-0">No active customer checkout holds matching your current query.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

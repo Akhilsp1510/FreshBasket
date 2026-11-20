@@ -1,0 +1,298 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}My Orders - FreshBasket{% endblock %}
+
+{% block content %}
+<div class="fb-orders-page">
+  <div class="fb-orders-canvas">
+    <!-- ═══ HEADER: TITLE & SUBTITLE ═══ -->
+    <div class="fb-orders-header">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+          <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0 small">
+              <li class="breadcrumb-item"><a href="{% url 'products:home' %}" class="text-decoration-none text-muted">Home</a></li>
+              <li class="breadcrumb-item active fw-semibold" style="color: var(--forest-green);">My Orders</li>
+            </ol>
+          </nav>
+          <h1 class="fb-orders-title">My Orders</h1>
+          <p class="fb-orders-subtitle">Track active 10-minute deliveries and view your past grocery receipts</p>
+        </div>
+        <div>
+          <a href="{% url 'products:product_list' %}" class="btn rounded-pill px-4 py-2 fw-semibold shadow-sm"
+             style="background: var(--forest-green); color: var(--white); border: none; font-size: 13.5px;">
+            <i class="bi bi-cart-plus me-1"></i> Order Groceries
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ FILTER & SORTING BAR ═══ -->
+    <div class="fb-orders-filter-bar">
+      <!-- Status Filter Tabs -->
+      <div class="fb-filter-pills">
+        <a href="{% url 'orders:my_orders' %}?status=all{% if current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}"
+           class="fb-filter-pill {% if current_status == 'all' %}active{% endif %}">
+          All Orders <span class="badge-count">{{ total_count }}</span>
+        </a>
+        <a href="{% url 'orders:my_orders' %}?status=ongoing{% if current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}"
+           class="fb-filter-pill {% if current_status == 'ongoing' %}active{% endif %}">
+          <i class="bi bi-lightning-charge-fill" style="color: #F6A828;"></i> Ongoing <span class="badge-count">{{ ongoing_count }}</span>
+        </a>
+        <a href="{% url 'orders:my_orders' %}?status=completed{% if current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}"
+           class="fb-filter-pill {% if current_status == 'completed' %}active{% endif %}">
+          <i class="bi bi-check-circle-fill" style="color: var(--fresh-green);"></i> Completed <span class="badge-count">{{ completed_count }}</span>
+        </a>
+        <a href="{% url 'orders:my_orders' %}?status=cancelled{% if current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}"
+           class="fb-filter-pill {% if current_status == 'cancelled' %}active{% endif %}">
+          Cancelled <span class="badge-count">{{ cancelled_count }}</span>
+        </a>
+      </div>
+
+      <!-- Sorting Dropdown -->
+      <div class="d-flex align-items-center gap-2">
+        <label for="orderSortSelect" class="small text-muted fw-semibold d-none d-sm-inline">Sort by:</label>
+        <select id="orderSortSelect" class="form-select form-select-sm rounded-pill px-3 py-2 border shadow-none"
+                style="font-size: 13px; width: auto; font-weight: 600; color: var(--text-primary);"
+                onchange="location = this.value;">
+          <option value="{% url 'orders:my_orders' %}?status={{ current_status }}&sort=newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest First</option>
+          <option value="{% url 'orders:my_orders' %}?status={{ current_status }}&sort=oldest" {% if current_sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+          <option value="{% url 'orders:my_orders' %}?status={{ current_status }}&sort=highest" {% if current_sort == 'highest' %}selected{% endif %}>Highest Total</option>
+          <option value="{% url 'orders:my_orders' %}?status={{ current_status }}&sort=lowest" {% if current_sort == 'lowest' %}selected{% endif %}>Lowest Total</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ═══ TWO-COLUMN DASHBOARD LAYOUT ═══ -->
+    <div class="row g-4">
+      <!-- ─── LEFT: ORDER CARDS LIST ─── -->
+      <div class="col-lg-8">
+        {% if orders %}
+          <div class="d-flex flex-column gap-3">
+            {% for order in orders %}
+            <div class="fb-order-card">
+              <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <!-- Item Preview & Core Details -->
+                <div class="d-flex align-items-center gap-3">
+                  <!-- Representative Product Image -->
+                  <div class="fb-order-thumb-wrap">
+                    {% with first_item=order.items.first %}
+                      {% if first_item.product and first_item.product.image %}
+                        <img src="{{ first_item.product.image.url }}" alt="{{ first_item.product_name }}">
+                      {% else %}
+                        <div class="fs-3 text-muted">🛒</div>
+                      {% endif %}
+                    {% endwith %}
+
+                    {% if order.items.count > 1 %}
+                      <span class="fb-order-more-chip">+{{ order.items.count|add:"-1" }}</span>
+                    {% endif %}
+                  </div>
+
+                  <!-- Order Meta Info -->
+                  <div>
+                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                      <a href="{% url 'orders:order_detail' order.order_number %}" class="fb-order-id-link">
+                        Order #{{ order.order_number }}
+                      </a>
+                      <span class="badge bg-light text-secondary border rounded-pill px-2 py-1 small" style="font-size: 11px;">
+                        {{ order.get_payment_method_display }}
+                      </span>
+                    </div>
+
+                    <!-- Items Summary String -->
+                    <p class="text-dark small fw-semibold mb-1" style="line-height: 1.35; max-width: 380px;">
+                      {% for item in order.items.all|slice:":3" %}
+                        {{ item.product_name }} (x{{ item.quantity }}){% if not forloop.last %}, {% endif %}
+                      {% endfor %}
+                      {% if order.items.count > 3 %}...{% endif %}
+                    </p>
+
+                    <!-- Order Timestamp & Delivery Address -->
+                    <div class="text-muted" style="font-size: 12px;">
+                      <i class="bi bi-clock me-1"></i>{{ order.created_at|date:"M d, Y · h:i A" }}
+                      <span class="mx-1">&bull;</span>
+                      <i class="bi bi-geo-alt me-1"></i>{{ order.delivery_city }} ({{ order.delivery_pincode }})
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Status & Action Block -->
+                <div class="d-flex flex-column align-items-sm-end gap-2 ms-auto ms-sm-0 text-start text-sm-end">
+                  <!-- Status Pill -->
+                  <div>
+                    {% if order.status == 'delivered' %}
+                      <span class="fb-status-pill fb-status-delivered">
+                        <i class="bi bi-check-circle-fill"></i> Delivered
+                      </span>
+                    {% elif order.status == 'out_for_delivery' %}
+                      <span class="fb-status-pill fb-status-out_for_delivery">
+                        <i class="bi bi-bicycle"></i> Out for Delivery
+                      </span>
+                    {% elif order.status == 'processing' %}
+                      <span class="fb-status-pill fb-status-processing">
+                        <i class="bi bi-box-seam"></i> Packing Items
+                      </span>
+                    {% elif order.status == 'confirmed' %}
+                      <span class="fb-status-pill fb-status-confirmed">
+                        <i class="bi bi-shield-check"></i> Confirmed
+                      </span>
+                    {% elif order.status == 'pending' %}
+                      <span class="fb-status-pill fb-status-pending">
+                        <i class="bi bi-receipt"></i> Order Placed
+                      </span>
+                    {% elif order.status == 'cancelled' %}
+                      <span class="fb-status-pill fb-status-cancelled">
+                        <i class="bi bi-x-circle"></i> Cancelled
+                      </span>
+                    {% endif %}
+                  </div>
+
+                  <!-- Total Price -->
+                  <div class="fw-bold fs-5 text-dark" style="color: var(--forest-green) !important;">
+                    ₹{{ order.total_amount }}
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="d-flex align-items-center gap-2">
+                    {% if order.can_cancel %}
+                      <form method="post" action="{% url 'orders:cancel_order' order.order_number %}" onsubmit="return confirm('Are you sure you want to cancel this order? Reserved stock will be immediately restored.')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold" style="font-size: 12px;">
+                          Cancel
+                        </button>
+                      </form>
+                    {% endif %}
+
+                    <a href="{% url 'orders:order_detail' order.order_number %}" class="btn btn-sm rounded-pill px-3 fw-semibold"
+                       style="background: var(--forest-green); color: var(--white); font-size: 12.5px;">
+                      View Details <i class="bi bi-chevron-right ms-1" style="font-size: 10px;"></i>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <!-- Empty State -->
+          <div class="card border-0 text-center py-5 px-4 rounded-4" style="background: #FAF9F4; border: 1px dashed var(--border-color) !important;">
+            <div class="mx-auto mb-3 rounded-circle d-flex align-items-center justify-content-center"
+                 style="width: 80px; height: 80px; background: var(--sage); color: var(--forest-green);">
+              <i class="bi bi-basket3 display-6"></i>
+            </div>
+            <h4 class="fw-bold text-dark" style="font-family: var(--font-serif);">No orders found</h4>
+            <p class="text-secondary mx-auto mb-4" style="max-width: 420px; font-size: 14px;">
+              {% if current_status != 'all' %}
+                You don't have any {{ current_status }} orders at the moment.
+              {% else %}
+                Your grocery pantry is waiting for you! Explore farm-fresh produce and daily kitchen essentials delivered in 10 minutes.
+              {% endif %}
+            </p>
+            <div>
+              <a href="{% url 'products:product_list' %}" class="btn rounded-pill px-4 py-2 fw-semibold shadow-sm"
+                 style="background: var(--forest-green); color: var(--white); border: none;">
+                <i class="bi bi-basket me-1"></i> Start Shopping
+              </a>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- ─── RIGHT: SIDEBAR WIDGETS ─── -->
+      <div class="col-lg-4">
+        <!-- Widget A: Order Summary -->
+        <div class="fb-sidebar-widget">
+          <div class="fb-sidebar-widget-title">
+            <i class="bi bi-pie-chart-fill" style="color: var(--fresh-green);"></i> Order Summary
+          </div>
+          <div class="fb-stat-grid">
+            <div class="fb-stat-cell">
+              <div class="fb-stat-number">{{ total_count }}</div>
+              <div class="fb-stat-label">Total Orders</div>
+            </div>
+            <div class="fb-stat-cell">
+              <div class="fb-stat-number" style="color: #B45309;">{{ ongoing_count }}</div>
+              <div class="fb-stat-label">Ongoing</div>
+            </div>
+            <div class="fb-stat-cell">
+              <div class="fb-stat-number" style="color: var(--fresh-green);">{{ completed_count }}</div>
+              <div class="fb-stat-label">Completed</div>
+            </div>
+            <div class="fb-stat-cell">
+              <div class="fb-stat-number" style="color: #B91C1C;">{{ cancelled_count }}</div>
+              <div class="fb-stat-label">Cancelled</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Widget B: FreshBasket Promotional Card -->
+        <div class="fb-sidebar-widget p-0 overflow-hidden border-0 shadow-sm mb-4">
+          <div class="fb-promo-card" style="background-image: url('{% static 'images/auth/auth_harvest_card.jpg' %}');">
+            <div>
+              <span class="badge rounded-pill px-3 py-1 mb-2 fw-bold" style="background: var(--sage); color: var(--forest-green); font-size: 11px;">
+                <i class="bi bi-stars"></i> Handpicked Promise
+              </span>
+              <h5 class="fw-bold text-white mb-1" style="font-family: var(--font-serif); font-size: 20px;">
+                Fresh groceries, delivered with care.
+              </h5>
+              <p class="small text-white-50 mb-0" style="line-height: 1.45; font-size: 12.5px;">
+                Thank you for choosing FreshBasket! Every item is packed 5 minutes before leaving our dark store.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Widget C: Fast Order Tracking Lookup -->
+        <div class="fb-sidebar-widget">
+          <div class="fb-sidebar-widget-title">
+            <i class="bi bi-geo-alt-fill" style="color: var(--fresh-green);"></i> Track Your Order
+          </div>
+          <p class="text-secondary small mb-3" style="font-size: 12.5px;">
+            Have an Order ID? Enter it below to check live packing and rider dispatch status.
+          </p>
+          <form id="trackOrderForm" onsubmit="handleTrackOrder(event)">
+            <div class="input-group mb-2">
+              <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted">#</span>
+              <input type="text" id="trackOrderIdInput" class="form-control bg-light border-start-0 py-2" placeholder="e.g. FBA823D4" required style="font-size: 13.5px;">
+              <button type="submit" class="btn rounded-end-pill px-3 fw-semibold" style="background: var(--forest-green); color: var(--white); font-size: 13px;">
+                Track
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Widget D: Need Help Support Card -->
+        <div class="fb-sidebar-widget mb-0" style="background: #F5F1EA; border-color: rgba(23,63,53,0.08);">
+          <div class="fb-sidebar-widget-title">
+            <i class="bi bi-headset" style="color: var(--forest-green);"></i> Customer Care
+          </div>
+          <p class="text-secondary small mb-2" style="font-size: 12.5px; line-height: 1.5;">
+            Questions regarding an order or grocery return? Our dark store support desk is active daily.
+          </p>
+          <div class="d-flex align-items-center gap-2 small fw-semibold text-dark mb-1">
+            <i class="bi bi-clock-history text-success"></i> Hours: 6:00 AM &ndash; 11:30 PM Daily
+          </div>
+          <div class="d-flex align-items-center gap-2 small text-secondary">
+            <i class="bi bi-shield-check text-success"></i> Indiranagar &bull; Koramangala &bull; HSR
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function handleTrackOrder(e) {
+  e.preventDefault();
+  const input = document.getElementById('trackOrderIdInput');
+  const orderId = input.value.trim().replace(/^#/, '');
+  if (orderId) {
+    window.location.href = `/orders/my-orders/${encodeURIComponent(orderId)}/`;
+  }
+}
+</script>
+{% endblock %}

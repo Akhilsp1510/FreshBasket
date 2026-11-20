@@ -1,0 +1,385 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Inventory Activity & Audit Ledger - FreshBasket SaaS Admin{% endblock %}
+
+{% block content %}
+<!-- ═══ HEADER: TITLE & SUBTITLE ═══ -->
+<div class="fb-admin-greeting-bar mb-4">
+  <div>
+    <h1 class="fb-admin-greeting-title">Inventory Activity</h1>
+    <p class="fb-admin-greeting-subtitle">
+      Every stock movement recorded with transparency and accountability.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 fw-semibold" style="font-size: 13px;">
+      <i class="bi bi-shield-check me-1"></i> Append-Only Ledger
+    </span>
+    <a href="{% url 'inventory:inventory_list' %}" class="btn rounded-pill px-3 py-2 btn-outline-secondary fw-semibold" style="font-size: 13px;">
+      <i class="bi bi-arrow-left me-1"></i> Inventory Ledger
+    </a>
+  </div>
+</div>
+
+<!-- ═══ 5 SUMMARY INFORMATION CARDS (ACTUAL DB RECORDS) ═══ -->
+<div class="row g-3 mb-4">
+  <!-- Total Transactions -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Total Movements</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: #F4F6F2; color: var(--forest-green);">
+          <i class="bi bi-journal-text"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-dark mb-0">{{ total_transactions }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">All logged ledger records</div>
+    </div>
+  </div>
+
+  <!-- Restock Transactions -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Restock Events</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: var(--sage); color: var(--forest-green);">
+          <i class="bi bi-box-arrow-in-down"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-success mb-0">{{ restock_transactions }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Warehouse stock additions</div>
+    </div>
+  </div>
+
+  <!-- Reservation Transactions -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Cart Holds</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: rgba(13,202,240,0.12); color: #087990;">
+          <i class="bi bi-lock-fill"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-info mb-0">{{ reservation_transactions }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Checkout hold / release events</div>
+    </div>
+  </div>
+
+  <!-- Sales Transactions -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Confirmed Sales</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: rgba(23,63,53,0.1); color: var(--forest-green);">
+          <i class="bi bi-bag-check-fill"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-dark mb-0">{{ sales_transactions }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Order checkout fulfillment</div>
+    </div>
+  </div>
+
+  <!-- Cancellation / Restoration Transactions -->
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100" style="border: 1px solid var(--border-color) !important;">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="text-muted small fw-semibold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Restorations</span>
+        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: rgba(255,193,7,0.15); color: #997404;">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </div>
+      </div>
+      <div class="fs-4 fw-bold text-warning mb-0">{{ cancellation_transactions }}</div>
+      <div class="text-muted" style="font-size: 10.5px;">Order cancellation returns</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FILTER & SEARCH PANEL ═══ -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: #FAF9F4; border: 1px solid var(--border-color) !important;">
+  <form method="get" class="row g-3 align-items-center">
+    <!-- Search Bar -->
+    <div class="col-lg-3 col-md-6">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0 rounded-start-pill ps-3 text-muted">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" name="q" value="{{ current_q }}" class="form-control bg-white border-start-0 rounded-end-pill py-2"
+               placeholder="Search product, actor, order #..." style="font-size: 13px;">
+      </div>
+    </div>
+
+    <!-- Product Filter -->
+    <div class="col-lg-3 col-md-6">
+      <select name="product" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13px; font-weight: 600;">
+        <option value="">All Products ({{ all_products.count }})</option>
+        {% for p in all_products %}
+          <option value="{{ p.id }}" {% if current_product == p.id|stringformat:"s" %}selected{% endif %}>
+            {{ p.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Movement Type Dropdown -->
+    <div class="col-lg-2 col-md-4">
+      <select name="type" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13px; font-weight: 600;">
+        <option value="">All Movement Types</option>
+        {% for choice_val, choice_label in change_type_choices %}
+          <option value="{{ choice_val }}" {% if current_type == choice_val %}selected{% endif %}>
+            {{ choice_label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Date From -->
+    <div class="col-lg-2 col-md-4">
+      <input type="date" name="date_from" value="{{ current_date_from }}" class="form-control rounded-pill py-2 border shadow-none"
+             title="Filter from date" style="font-size: 12.5px;">
+    </div>
+
+    <!-- Date To & Submit -->
+    <div class="col-lg-2 col-md-4 d-flex gap-1">
+      <input type="date" name="date_to" value="{{ current_date_to }}" class="form-control rounded-pill py-2 border shadow-none"
+             title="Filter to date" style="font-size: 12.5px;">
+      <button type="submit" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold"
+              style="background: var(--forest-green); color: var(--white); font-size: 13px;">
+        Filter
+      </button>
+      {% if current_q or current_product or current_type or current_date_from or current_date_to %}
+        <a href="{% url 'inventory:inventory_log' %}" class="btn btn-sm btn-outline-secondary rounded-circle py-2 px-2" title="Reset Filters">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Quick Filter Pills -->
+  <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top" style="border-color: rgba(23,63,53,0.08) !important;">
+    <a href="{% url 'inventory:inventory_log' %}" class="fb-filter-pill {% if not current_type %}active{% endif %}">
+      All Movements <span class="badge-count">{{ total_transactions }}</span>
+    </a>
+    <a href="{% url 'inventory:inventory_log' %}?type=restock" class="fb-filter-pill {% if current_type == 'restock' %}active{% endif %}">
+      <i class="bi bi-box-arrow-in-down text-success"></i> Restocks <span class="badge-count">{{ restock_transactions }}</span>
+    </a>
+    <a href="{% url 'inventory:inventory_log' %}?type=sale" class="fb-filter-pill {% if current_type == 'sale' %}active{% endif %}">
+      <i class="bi bi-bag-check text-primary"></i> Confirmed Sales <span class="badge-count">{{ sales_transactions }}</span>
+    </a>
+    <a href="{% url 'inventory:inventory_log' %}?type=reservation" class="fb-filter-pill {% if current_type == 'reservation' %}active{% endif %}">
+      <i class="bi bi-lock-fill text-info"></i> Cart Holds
+    </a>
+    <a href="{% url 'inventory:inventory_log' %}?type=cancellation" class="fb-filter-pill {% if current_type == 'cancellation' %}active{% endif %}">
+      <i class="bi bi-arrow-counterclockwise text-warning"></i> Restorations <span class="badge-count">{{ cancellation_transactions }}</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══ AUDIT TABLE CARD ═══ -->
+<div class="fb-admin-table-card">
+  <div class="fb-admin-table-header">
+    <div>
+      <h2 class="fb-admin-table-title">
+        <i class="bi bi-journal-check text-success"></i> Audit Movement Journal ({{ page_obj.paginator.count }} Records)
+      </h2>
+      <div class="text-muted small" style="font-size: 12px;">
+        Chronological audit record of inventory movements. Append-only architecture: historical entries cannot be edited or deleted through the interface.
+      </div>
+    </div>
+    <div>
+      <span class="badge rounded-pill bg-light text-muted border px-3 py-1 small">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }}
+      </span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle table-hover">
+      <thead>
+        <tr>
+          <th>Tx ID</th>
+          <th>Timestamp</th>
+          <th>Product Asset</th>
+          <th>Movement Type</th>
+          <th class="text-center">Delta Qty</th>
+          <th class="text-center">Physical Stock (Before &rarr; After)</th>
+          <th>Initiator / Actor</th>
+          <th>Reason / Notes</th>
+          <th class="text-end pe-4">Order / Hold Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <!-- Transaction ID -->
+          <td>
+            <span class="badge bg-light text-dark border rounded-pill px-2 py-1 font-monospace small">
+              #{{ log.id }}
+            </span>
+          </td>
+
+          <!-- Timestamp -->
+          <td class="text-muted small" style="white-space: nowrap;">
+            <i class="bi bi-calendar3 me-1"></i>{{ log.timestamp|date:"M d, Y" }}
+            <span class="d-block text-secondary" style="font-size: 11px;">{{ log.timestamp|date:"h:i:s A" }}</span>
+          </td>
+
+          <!-- Product Info with Thumbnail -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-3 border bg-light p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                {% if log.product.image %}
+                  <img src="{{ log.product.image.url }}" alt="{{ log.product.name }}" class="w-100 h-100 object-fit-contain rounded-2">
+                {% else %}
+                  <i class="bi bi-bag text-muted"></i>
+                {% endif %}
+              </div>
+              <div>
+                <a href="{% url 'inventory:restock' log.product.pk %}" class="fw-bold text-dark text-decoration-none small d-block">
+                  {{ log.product.name }}
+                </a>
+                <span class="text-muted" style="font-size: 11px;">{{ log.product.category.name }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Movement Type Badge -->
+          <td>
+            {% if log.change_type == 'restock' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                <i class="bi bi-box-arrow-in-down me-1"></i> Restock
+              </span>
+            {% elif log.change_type == 'sale' %}
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 small">
+                <i class="bi bi-bag-check-fill me-1"></i> Sale Confirmed
+              </span>
+            {% elif log.change_type == 'reservation' %}
+              <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 small">
+                <i class="bi bi-lock-fill me-1"></i> Cart Hold
+              </span>
+            {% elif log.change_type == 'reservation_release' %}
+              <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1 small">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Hold Release
+              </span>
+            {% elif log.change_type == 'cancellation' %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 small">
+                <i class="bi bi-x-circle-fill me-1"></i> Cancellation Return
+              </span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1 small">
+                {{ log.get_change_type_display }}
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Quantity Change -->
+          <td class="text-center">
+            <span class="fw-bold fs-6 {% if log.quantity_changed > 0 %}text-success{% elif log.quantity_changed < 0 %}text-danger{% else %}text-muted{% endif %}">
+              {% if log.quantity_changed > 0 %}+{% endif %}{{ log.quantity_changed }}
+            </span>
+          </td>
+
+          <!-- Before Stock & After Stock -->
+          <td class="text-center small">
+            <div class="d-inline-flex align-items-center gap-1 p-1 px-2 rounded-pill bg-light border">
+              <span class="text-muted">{{ log.previous_physical_stock }}</span>
+              <i class="bi bi-arrow-right text-secondary" style="font-size: 10px;"></i>
+              <span class="fw-bold text-dark">{{ log.new_physical_stock }}</span>
+            </div>
+          </td>
+
+          <!-- Initiator / Actor -->
+          <td class="small">
+            {% if log.performed_by %}
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                     style="width: 24px; height: 24px; background: var(--fresh-green); font-size: 11px;">
+                  {{ log.performed_by.username|first|upper }}
+                </div>
+                <span class="fw-semibold text-dark">{{ log.performed_by.username }}</span>
+              </div>
+            {% else %}
+              <span class="badge bg-light text-muted border rounded-pill px-2 py-1 small">
+                <i class="bi bi-cpu me-1"></i> System Engine
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Reason / Notes -->
+          <td class="small text-muted" style="max-width: 200px;">
+            {{ log.reason|default:"Standard transaction update" }}
+          </td>
+
+          <!-- Related Order or Reservation Reference -->
+          <td class="text-end pe-4">
+            {% if log.reference_order %}
+              <a href="{% url 'orders:admin_order_detail' log.reference_order.order_number %}"
+                 class="btn btn-outline-success btn-sm rounded-pill py-0 px-2 fw-semibold" style="font-size: 11px;">
+                Order #{{ log.reference_order.order_number }}
+              </a>
+            {% elif log.reference_reservation %}
+              <a href="{% url 'inventory:reservations' %}?q={{ log.reference_reservation.user.username }}"
+                 class="badge bg-light text-secondary border rounded-pill text-decoration-none px-2 py-1 small">
+                Hold #{{ log.reference_reservation.id }}
+              </a>
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center py-5">
+            <div class="p-4 text-center">
+              <i class="bi bi-journal-x text-muted" style="font-size: 48px; opacity: 0.4;"></i>
+              <h5 class="fw-bold text-dark mt-2 mb-1">No Inventory Activity Found</h5>
+              <p class="text-muted small mb-0">No transaction logs match your active filter parameters.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  {% if page_obj.has_other_pages %}
+  <div class="p-3 border-top d-flex justify-content-between align-items-center" style="background: #FAF9F4;">
+    <div class="small text-muted">
+      Showing <strong>{{ page_obj.start_index }}</strong> to <strong>{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> transactions
+    </div>
+    <nav aria-label="Audit pagination">
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link rounded-pill px-3 me-1" href="?page={{ page_obj.previous_page_number }}&type={{ current_type }}&product={{ current_product }}&q={{ current_q }}&date_from={{ current_date_from }}&date_to={{ current_date_to }}">
+              &laquo; Previous
+            </a>
+          </li>
+        {% endif %}
+        
+        {% for p_num in page_obj.paginator.page_range %}
+          {% if p_num == page_obj.number %}
+            <li class="page-item active">
+              <span class="page-link rounded-circle mx-1" style="background: var(--forest-green); border-color: var(--forest-green);">{{ p_num }}</span>
+            </li>
+          {% elif p_num > page_obj.number|add:"-3" and p_num < page_obj.number|add:"3" %}
+            <li class="page-item">
+              <a class="page-link rounded-circle mx-1" href="?page={{ p_num }}&type={{ current_type }}&product={{ current_product }}&q={{ current_q }}&date_from={{ current_date_from }}&date_to={{ current_date_to }}">{{ p_num }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link rounded-pill px-3 ms-1" href="?page={{ page_obj.next_page_number }}&type={{ current_type }}&product={{ current_product }}&q={{ current_q }}&date_from={{ current_date_from }}&date_to={{ current_date_to }}">
+              Next &raquo;
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

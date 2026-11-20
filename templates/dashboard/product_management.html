@@ -1,0 +1,254 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Product Catalog Management - FreshBasket SaaS{% endblock %}
+
+{% block content %}
+<!-- ═══ HEADER: TITLE & ACTIONS ═══ -->
+<div class="fb-admin-greeting-bar mb-4">
+  <div>
+    <h1 class="fb-admin-greeting-title">Product Management</h1>
+    <p class="fb-admin-greeting-subtitle">Manage store catalog, pricing, category taxonomy, and inventory visibility.</p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <a href="{% url 'dashboard:add_product' %}" class="btn rounded-pill px-4 py-2 fw-semibold shadow-sm"
+       style="background: var(--forest-green); color: var(--white); border: none; font-size: 13.5px;">
+      <i class="bi bi-plus-circle me-1"></i> Add New Product
+    </a>
+  </div>
+</div>
+
+<!-- ═══ FILTER & SEARCH PANEL ═══ -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background: #FAF9F4; border: 1px solid var(--border-color) !important;">
+  <form method="get" class="row g-3 align-items-center">
+    <!-- Search Bar -->
+    <div class="col-lg-4 col-md-6">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0 rounded-start-pill ps-3 text-muted">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" name="q" value="{{ current_q }}" class="form-control bg-white border-start-0 rounded-end-pill py-2"
+               placeholder="Search product name, brand..." style="font-size: 13.5px;">
+      </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="col-lg-3 col-md-6">
+      <select name="category" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13px; font-weight: 600;">
+        <option value="">All Categories ({{ categories.count }})</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if current_category == cat.id|stringformat:"s" %}selected{% endif %}>
+            {{ cat.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="col-lg-2 col-sm-6">
+      <select name="status" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13px; font-weight: 600;">
+        <option value="" {% if not current_status %}selected{% endif %}>All Status ({{ total_count }})</option>
+        <option value="active" {% if current_status == 'active' %}selected{% endif %}>Active ({{ active_count }})</option>
+        <option value="inactive" {% if current_status == 'inactive' %}selected{% endif %}>Inactive ({{ inactive_count }})</option>
+        <option value="low_stock" {% if current_status == 'low_stock' %}selected{% endif %}>Low Stock / OOS ({{ low_stock_count }})</option>
+      </select>
+    </div>
+
+    <!-- Sort Dropdown -->
+    <div class="col-lg-2 col-sm-6">
+      <select name="sort" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13px; font-weight: 600;">
+        <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name (A-Z)</option>
+        <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: Low &rarr; High</option>
+        <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Price: High &rarr; Low</option>
+        <option value="stock_low" {% if current_sort == 'stock_low' %}selected{% endif %}>Stock: Lowest First</option>
+        <option value="stock_high" {% if current_sort == 'stock_high' %}selected{% endif %}>Stock: Highest First</option>
+      </select>
+    </div>
+
+    <!-- Submit & Clear Buttons -->
+    <div class="col-lg-1 col-12 d-flex gap-1 justify-content-end">
+      <button type="submit" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold w-100"
+              style="background: var(--forest-green); color: var(--white); font-size: 13px;">
+        Filter
+      </button>
+      {% if current_q or current_category or current_status or current_sort != 'name' %}
+        <a href="{% url 'dashboard:product_management' %}" class="btn btn-sm btn-outline-secondary rounded-circle py-2 px-2" title="Clear Filters">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Quick Filter Pills Strip -->
+  <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top" style="border-color: rgba(23,63,53,0.08) !important;">
+    <a href="{% url 'dashboard:product_management' %}" class="fb-filter-pill {% if not current_status %}active{% endif %}">
+      All Products <span class="badge-count">{{ total_count }}</span>
+    </a>
+    <a href="{% url 'dashboard:product_management' %}?status=active" class="fb-filter-pill {% if current_status == 'active' %}active{% endif %}">
+      <i class="bi bi-check-circle-fill text-success"></i> Active <span class="badge-count">{{ active_count }}</span>
+    </a>
+    <a href="{% url 'dashboard:product_management' %}?status=inactive" class="fb-filter-pill {% if current_status == 'inactive' %}active{% endif %}">
+      Inactive <span class="badge-count">{{ inactive_count }}</span>
+    </a>
+    <a href="{% url 'dashboard:product_management' %}?status=low_stock" class="fb-filter-pill {% if current_status == 'low_stock' %}active{% endif %}">
+      <i class="bi bi-exclamation-triangle-fill text-warning"></i> Stock Warning <span class="badge-count">{{ low_stock_count }}</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══ PRODUCT MANAGEMENT TABLE CARD ═══ -->
+<div class="fb-admin-table-card">
+  <div class="fb-admin-table-header">
+    <div>
+      <h5 class="fb-admin-table-title">
+        <i class="bi bi-box-seam text-success"></i> Store Catalog ({{ products.count }} item{{ products.count|pluralize }})
+      </h5>
+      <span class="text-muted" style="font-size: 11.5px;">Click any row to manage details, pricing or stock levels</span>
+    </div>
+    <div class="small text-muted">
+      Showing <strong>{{ products.count }}</strong> of {{ total_count }} products
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Category</th>
+          <th>Selling Price</th>
+          <th class="text-center">Physical</th>
+          <th class="text-center">Reserved</th>
+          <th class="text-center">Available</th>
+          <th class="text-center">Threshold</th>
+          <th>Catalog Status</th>
+          <th class="text-end pe-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for product in products %}
+        <tr class="{% if not product.is_active %}opacity-75 bg-light bg-opacity-25{% endif %}">
+          <!-- Product Info & Real Photography -->
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div class="rounded-3 border p-1 d-flex align-items-center justify-content-center flex-shrink-0"
+                   style="width: 48px; height: 48px; background: #FAF9F4;">
+                {% if product.image %}
+                  <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-100 h-100 object-fit-contain rounded-2">
+                {% else %}
+                  <span class="fs-5">🛒</span>
+                {% endif %}
+              </div>
+              <div>
+                <span class="fw-bold text-dark small d-block">{{ product.name }}</span>
+                <span class="text-muted" style="font-size: 11px;">
+                  {% if product.brand %}{{ product.brand }} &bull; {% endif %}{{ product.unit_display|default:product.unit }}
+                  {% if product.is_featured %}<span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size: 9px;">★ Featured</span>{% endif %}
+                </span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Category -->
+          <td>
+            <span class="badge bg-light text-secondary border rounded-pill px-2 py-1 small" style="font-size: 11px;">
+              {{ product.category.name }}
+            </span>
+          </td>
+
+          <!-- Selling Price -->
+          <td>
+            <span class="fw-bold" style="color: var(--forest-green);">₹{{ product.price }}</span>
+          </td>
+
+          <!-- Physical Stock -->
+          <td class="text-center">
+            <span class="fw-semibold text-dark">{{ product.inventory.physical_stock|default:0 }}</span>
+          </td>
+
+          <!-- Reserved Stock -->
+          <td class="text-center">
+            {% if product.inventory.reserved_stock > 0 %}
+              <span class="badge bg-info-subtle text-info rounded-pill px-2 py-1 small">
+                <i class="bi bi-lock-fill me-1"></i>{{ product.inventory.reserved_stock }}
+              </span>
+            {% else %}
+              <span class="text-muted small">0</span>
+            {% endif %}
+          </td>
+
+          <!-- Available Stock -->
+          <td class="text-center">
+            <span class="fw-bold fs-6 {% if product.inventory.available_stock > product.low_stock_threshold %}text-success{% elif product.inventory.available_stock > 0 %}text-warning{% else %}text-danger{% endif %}">
+              {{ product.inventory.available_stock|default:0 }}
+            </span>
+          </td>
+
+          <!-- Safety Threshold -->
+          <td class="text-center text-muted small">
+            {{ product.low_stock_threshold }}
+          </td>
+
+          <!-- Stock & Visibility Status Badge -->
+          <td>
+            <div class="d-flex flex-column gap-1">
+              {% if product.is_active %}
+                {% if product.inventory.stock_status == 'in_stock' %}
+                  <span class="badge badge-in-stock rounded-pill px-2 py-1 small">In Stock</span>
+                {% elif product.inventory.stock_status == 'low_stock' %}
+                  <span class="badge badge-low-stock rounded-pill px-2 py-1 small">Low Stock</span>
+                {% else %}
+                  <span class="badge badge-out-stock rounded-pill px-2 py-1 small">Out of Stock</span>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-secondary rounded-pill px-2 py-1 small">Inactive (Hidden)</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Action Buttons -->
+          <td class="text-end pe-4">
+            <div class="d-inline-flex gap-1">
+              <!-- Edit Product -->
+              <a href="{% url 'dashboard:edit_product' product.pk %}" class="btn btn-sm btn-outline-secondary rounded-circle" title="Edit Product">
+                <i class="bi bi-pencil"></i>
+              </a>
+
+              <!-- Restock Inventory -->
+              <a href="{% url 'inventory:restock' product.pk %}" class="btn btn-sm rounded-circle text-white shadow-none"
+                 style="background: var(--forest-green);" title="Restock Units">
+                <i class="bi bi-plus-lg"></i>
+              </a>
+
+              <!-- Toggle Active / Inactive -->
+              <form method="post" action="{% url 'dashboard:toggle_product' product.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm rounded-circle {% if product.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                        title="{% if product.is_active %}Deactivate (Hide from store){% else %}Activate (Publish in store){% endif %}"
+                        onclick="return confirm('Toggle active visibility for {{ product.name|escapejs }}?')">
+                  <i class="bi {% if product.is_active %}bi-eye-slash{% else %}bi-eye{% endif %}"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-5">
+            <div class="mx-auto mb-2 rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+              <i class="bi bi-inbox text-muted fs-4"></i>
+            </div>
+            <h6 class="fw-bold text-dark">No products found matching filters</h6>
+            <p class="small text-muted mb-3">Try adjusting your search query, department filter, or status selection.</p>
+            <a href="{% url 'dashboard:add_product' %}" class="btn btn-sm rounded-pill px-3 fw-semibold"
+               style="background: var(--forest-green); color: var(--white);">
+              <i class="bi bi-plus-circle me-1"></i> Add New Product
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

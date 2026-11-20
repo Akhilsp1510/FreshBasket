@@ -1,0 +1,377 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Secure Checkout — FreshBasket{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- ═══ 1. BREADCRUMB ═══ -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'products:home' %}" class="text-decoration-none text-muted">
+          <i class="bi bi-house me-1"></i>Home
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'orders:cart' %}" class="text-decoration-none text-muted">
+          Shopping Basket
+        </a>
+      </li>
+      <li class="breadcrumb-item active fw-semibold" style="color: var(--fb-primary-forest);">
+        Secure Checkout
+      </li>
+    </ol>
+  </nav>
+
+  <!-- ═══ 2. CHECKOUT HEADER ═══ -->
+  <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom" style="border-color: var(--fb-border) !important;">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'orders:cart' %}" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center"
+         style="width: 36px; height: 36px;" title="Back to Shopping Basket">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <h3 class="fw-bold mb-0 font-display text-dark" style="letter-spacing: -0.02em;">
+          Fast &amp; Secure Checkout
+        </h3>
+        <p class="text-muted small mb-0">
+          ⚡ 10-Minute Cold-Chain Express &bull; Verified Inventory Row-Level Lock
+        </p>
+      </div>
+    </div>
+    <div class="d-none d-sm-block">
+      <span class="badge rounded-pill px-3 py-2 fw-semibold"
+            style="background: var(--fb-light-sage); color: var(--fb-primary-forest); border: 1px solid var(--fb-border);">
+        <i class="bi bi-shield-check text-success me-1"></i>256-bit SSL Protected
+      </span>
+    </div>
+  </div>
+
+  <form method="post" id="checkoutForm">
+    {% csrf_token %}
+    <div class="row g-4">
+      <!-- ═══ LEFT COLUMN: DELIVERY ADDRESS & PAYMENT ═══ -->
+      <div class="col-lg-7">
+        <!-- ── STEP 1: DELIVERY ADDRESS ── -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white" style="border: 1px solid var(--fb-border) !important;">
+          <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom" style="border-color: var(--fb-border-subtle) !important;">
+            <div class="d-flex align-items-center gap-2">
+              <span class="fb-checkout-step-badge">1</span>
+              <h5 class="fw-bold mb-0 font-display text-dark" style="font-size: 17px;">Delivery Address</h5>
+            </div>
+            {% if saved_addresses %}
+              <a href="{% url 'accounts:add_address' %}" class="btn btn-outline-success btn-sm rounded-pill px-3" style="font-size: 11.5px;">
+                <i class="bi bi-plus-lg me-1"></i>New Address
+              </a>
+            {% endif %}
+          </div>
+
+          <!-- Saved Addresses Grid (if available) -->
+          {% if saved_addresses %}
+          <div class="mb-4">
+            <label class="form-label small fw-semibold text-muted d-block mb-2" style="font-size: 12px;">
+              Select a Saved Delivery Location:
+            </label>
+            <div class="row g-2">
+              {% for addr in saved_addresses %}
+              <div class="col-sm-6">
+                <div class="fb-address-card h-100 {% if addr.is_default %}selected{% endif %}"
+                     onclick="selectAddress(this, '{{ addr.full_name|escapejs }}', '{{ addr.phone|escapejs }}', '{{ addr.address_line1|escapejs }}', '{{ addr.address_line2|escapejs }}', '{{ addr.city|escapejs }}', '{{ addr.state|escapejs }}', '{{ addr.pincode|escapejs }}')">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="badge rounded-pill small" style="background: var(--fb-bg-cream); color: var(--fb-text-primary); border: 1px solid var(--fb-border); font-size: 10.5px;">
+                      {% if addr.label == 'home' %}🏠 Home
+                      {% elif addr.label == 'work' %}🏢 Work
+                      {% else %}📍 Other{% endif %}
+                    </span>
+                    {% if addr.is_default %}
+                      <span class="badge rounded-pill small" style="background: var(--fb-light-sage); color: var(--fb-primary-forest); font-size: 10.5px;">
+                        Default
+                      </span>
+                    {% endif %}
+                  </div>
+                  <strong class="text-dark small d-block">{{ addr.full_name }}</strong>
+                  <span class="text-muted d-block" style="font-size: 11.5px; line-height: 1.35;">
+                    {{ addr.address_line1 }}{% if addr.address_line2 %}, {{ addr.address_line2 }}{% endif %}<br>
+                    {{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}
+                  </span>
+                  <div class="mt-2 text-dark fw-semibold" style="font-size: 11px;">
+                    <i class="bi bi-telephone text-secondary me-1"></i>{{ addr.phone }}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="small text-muted mt-2 fst-italic" style="font-size: 11px;">
+              * Selecting an address automatically updates the fields below.
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Address Form Fields -->
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold text-secondary">Full Name *</label>
+              {{ form.full_name }}
+              {% if form.full_name.errors %}
+                <div class="text-danger small mt-1" style="font-size: 11px;">{{ form.full_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold text-secondary">Phone Number (10 digits) *</label>
+              {{ form.phone }}
+              {% if form.phone.errors %}
+                <div class="text-danger small mt-1" style="font-size: 11px;">{{ form.phone.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold text-secondary">Flat / House No. &amp; Street Address *</label>
+              {{ form.address_line1 }}
+              {% if form.address_line1.errors %}
+                <div class="text-danger small mt-1" style="font-size: 11px;">{{ form.address_line1.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold text-secondary">Apartment / Landmark (Optional)</label>
+              {{ form.address_line2 }}
+            </div>
+            <div class="col-sm-5">
+              <label class="form-label small fw-semibold text-secondary">City *</label>
+              {{ form.city }}
+              {% if form.city.errors %}
+                <div class="text-danger small mt-1" style="font-size: 11px;">{{ form.city.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-semibold text-secondary">State *</label>
+              {{ form.state }}
+              {% if form.state.errors %}
+                <div class="text-danger small mt-1" style="font-size: 11px;">{{ form.state.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-semibold text-secondary">PIN Code *</label>
+              {{ form.pincode }}
+              {% if form.pincode.errors %}
+                <div class="text-danger small mt-1" style="font-size: 11px;">{{ form.pincode.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STEP 2: PAYMENT METHOD ── -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white" style="border: 1px solid var(--fb-border) !important;">
+          <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--fb-border-subtle) !important;">
+            <span class="fb-checkout-step-badge">2</span>
+            <h5 class="fw-bold mb-0 font-display text-dark" style="font-size: 17px;">Payment Method</h5>
+          </div>
+
+          <!-- Selectable Payment Cards -->
+          <div class="d-flex flex-column gap-3">
+            <!-- Cash on Delivery -->
+            <label class="fb-payment-card d-flex align-items-start gap-3 cursor-pointer mb-0 selected" id="codPaymentCard">
+              <input type="radio" name="payment_method" value="cod" checked class="mt-1" onchange="updatePaymentCardSelection(this)">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-cash-stack text-success fs-5"></i>
+                  <strong class="text-dark">Cash on Delivery (Pay at Doorstep)</strong>
+                  <span class="badge rounded-pill small ms-auto" style="background: var(--fb-light-sage); color: var(--fb-primary-forest);">
+                    Most Popular
+                  </span>
+                </div>
+                <p class="small text-muted mb-0 mt-1" style="font-size: 12px;">
+                  Pay cash or UPI directly to our delivery partner upon arrival at your doorstep. Zero online payment risk.
+                </p>
+              </div>
+            </label>
+
+            <!-- Simulated Online Payment -->
+            <label class="fb-payment-card d-flex align-items-start gap-3 cursor-pointer mb-0" id="simulatedPaymentCard">
+              <input type="radio" name="payment_method" value="simulated" class="mt-1" onchange="updatePaymentCardSelection(this)">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-credit-card-2-front text-primary fs-5"></i>
+                  <strong class="text-dark">Online Payment (Simulated Academic Demo)</strong>
+                  <span class="badge rounded-pill small ms-auto bg-light text-secondary border">
+                    College Demo
+                  </span>
+                </div>
+                <p class="small text-muted mb-0 mt-1" style="font-size: 12px;">
+                  Demonstrates instant automated payment verification and reservation confirmation. No real credit card details collected or stored.
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- ── STEP 3: DELIVERY INSTRUCTIONS ── -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white" style="border: 1px solid var(--fb-border) !important;">
+          <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--fb-border-subtle) !important;">
+            <span class="fb-checkout-step-badge">3</span>
+            <h5 class="fw-bold mb-0 font-display text-dark" style="font-size: 17px;">Delivery Instructions (Optional)</h5>
+          </div>
+
+          <!-- Quick Instruction Pills -->
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <button type="button" class="btn btn-sm rounded-pill px-3 fw-semibold instruction-pill"
+                    style="background: var(--fb-bg-cream); color: var(--fb-text-primary); border: 1px solid var(--fb-border); font-size: 11.5px;"
+                    onclick="appendInstruction('Do not ring bell')">
+              <i class="bi bi-bell-slash me-1"></i>Don't ring bell
+            </button>
+            <button type="button" class="btn btn-sm rounded-pill px-3 fw-semibold instruction-pill"
+                    style="background: var(--fb-bg-cream); color: var(--fb-text-primary); border: 1px solid var(--fb-border); font-size: 11.5px;"
+                    onclick="appendInstruction('Leave at door')">
+              <i class="bi bi-door-closed me-1"></i>Leave at door
+            </button>
+            <button type="button" class="btn btn-sm rounded-pill px-3 fw-semibold instruction-pill"
+                    style="background: var(--fb-bg-cream); color: var(--fb-text-primary); border: 1px solid var(--fb-border); font-size: 11.5px;"
+                    onclick="appendInstruction('Call before delivery')">
+              <i class="bi bi-telephone me-1"></i>Call before arrival
+            </button>
+            <button type="button" class="btn btn-sm rounded-pill px-3 fw-semibold instruction-pill"
+                    style="background: var(--fb-bg-cream); color: var(--fb-text-primary); border: 1px solid var(--fb-border); font-size: 11.5px;"
+                    onclick="appendInstruction('Pet at home')">
+              <i class="bi bi-shield-check me-1"></i>Pet at home
+            </button>
+          </div>
+
+          {{ form.notes }}
+        </div>
+      </div>
+
+      <!-- ═══ RIGHT COLUMN: ORDER SUMMARY & PLACE ORDER ═══ -->
+      <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 p-4 sticky-top bg-white" style="top: 85px; border: 1px solid var(--fb-border) !important;">
+          <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" style="border-color: var(--fb-border) !important;">
+            <h5 class="fw-bold font-display mb-0" style="color: var(--fb-primary-forest);">
+              Order Summary
+            </h5>
+            <span class="badge rounded-pill bg-light text-secondary border small">{{ items.count }} Items</span>
+          </div>
+
+          <!-- Product Line Items List -->
+          <div class="mb-3" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
+            {% for item in items %}
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom" style="border-color: var(--fb-border-subtle) !important;">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-2 p-1 bg-light border d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                  {% if item.product.image %}
+                    <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" style="max-height: 36px; max-width: 36px; object-fit: contain;">
+                  {% else %}
+                    <span class="fs-6">🛒</span>
+                  {% endif %}
+                </div>
+                <div>
+                  <div class="small fw-semibold text-dark text-truncate" style="max-width: 170px;">
+                    {{ item.product.name }}
+                  </div>
+                  <small class="text-muted" style="font-size: 11px;">
+                    {{ item.quantity }} &times; ₹{{ item.product.price }}
+                  </small>
+                </div>
+              </div>
+              <span class="small fw-bold font-display text-dark">₹{{ item.get_subtotal }}</span>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Bill Breakdown -->
+          <div class="fb-price-row">
+            <span>Items Subtotal</span>
+            <span class="fw-semibold text-dark">₹{{ subtotal }}</span>
+          </div>
+
+          <div class="fb-price-row">
+            <span>10-Min Cold-Chain Delivery</span>
+            <span class="fw-semibold text-dark">₹{{ delivery_fee }}</span>
+          </div>
+
+          <div class="fb-price-row">
+            <span>Packaging &amp; Safe Handling</span>
+            <span class="fw-bold text-success">FREE</span>
+          </div>
+
+          <!-- Total Row -->
+          <div class="fb-price-row total-row">
+            <span>Total Payable</span>
+            <span class="font-display fw-bold" style="font-size: 24px; color: var(--fb-primary-forest);">
+              ₹{{ total }}
+            </span>
+          </div>
+
+          <!-- Place Order Button with Anti-Double-Submit Protection -->
+          <div class="mt-4">
+            <button type="submit" id="placeOrderBtn" class="btn-fb-primary w-100 justify-content-center py-3 fs-6 shadow-sm">
+              <i class="bi bi-shield-lock-fill me-1"></i>
+              <span>Place Order &bull; ₹{{ total }}</span>
+            </button>
+          </div>
+
+          <!-- Transaction-Safe Lock Reassurance -->
+          <div class="mt-4 pt-3 border-top" style="border-color: var(--fb-border-subtle) !important;">
+            <div class="p-3 rounded-3" style="background: var(--fb-bg-cream); border: 1px solid var(--fb-border);">
+              <div class="d-flex align-items-center gap-2 small fw-bold mb-1" style="color: var(--fb-primary-forest);">
+                <i class="bi bi-lock-fill text-success"></i>
+                Zero Overselling Guarantee
+              </div>
+              <p class="small text-muted mb-0" style="font-size: 11px; line-height: 1.45;">
+                Upon clicking Place Order, physical stock is atomically reserved via MySQL row-level locking for 10 minutes. No duplicate orders or stock conflicts.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectAddress(cardElement, name, phone, line1, line2, city, state, pin) {
+  // Highlight selected card
+  document.querySelectorAll('.fb-address-card').forEach(c => c.classList.remove('selected'));
+  cardElement.classList.add('selected');
+
+  // Populate form fields
+  document.getElementById('id_full_name').value = name;
+  document.getElementById('id_phone').value = phone;
+  document.getElementById('id_address_line1').value = line1;
+  document.getElementById('id_address_line2').value = line2;
+  document.getElementById('id_city').value = city;
+  document.getElementById('id_state').value = state;
+  document.getElementById('id_pincode').value = pin;
+}
+
+function updatePaymentCardSelection(radioInput) {
+  document.querySelectorAll('.fb-payment-card').forEach(c => c.classList.remove('selected'));
+  if (radioInput.checked) {
+    radioInput.closest('.fb-payment-card').classList.add('selected');
+  }
+}
+
+function appendInstruction(text) {
+  const notesField = document.getElementById('id_notes');
+  if (notesField) {
+    if (notesField.value.trim() === '') {
+      notesField.value = text;
+    } else if (!notesField.value.includes(text)) {
+      notesField.value += ', ' + text;
+    }
+  }
+}
+
+// Anti Double Submit Protection
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('checkoutForm');
+  const btn = document.getElementById('placeOrderBtn');
+
+  if (form && btn) {
+    form.addEventListener('submit', function() {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Reserving Stock & Placing Order...';
+    });
+  }
+});
+</script>
+{% endblock %}

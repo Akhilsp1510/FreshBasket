@@ -1,0 +1,60 @@
+# Python Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+.Python
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Django runtime & logs
+*.log
+freshbasket.log
+local_settings.py
+db.sqlite3
+*.sqlite3
+staticfiles/
+
+# Media handling: ignore dynamic runtime uploads, but preserve seed product & category assets
+media/*
+!media/products/
+!media/categories/
+
+# Environment Variables & Secrets - NEVER COMMIT THESE
+.env
+.env.*
+!.env.example
+
+# AWS / Cloud credentials & keys
+.aws/
+*.pem
+*.ppk
+*.key
+
+# Temporary QA testing scripts & screenshots
+scratch/
+responsive_screenshots/
+/*.png
+/test_*.png
+/audit_*.png
+
+# IDE & Editor configuration
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Operating System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Packaging & Distribution
+dist/
+build/
+*.egg-info/

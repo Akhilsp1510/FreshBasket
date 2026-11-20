@@ -1,0 +1,173 @@
+{% extends "base/base.html" %}
+
+{% block title %}Order Confirmed #{{ order.order_number }} - FreshBasket{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 760px;">
+  <!-- Order Success Master Card -->
+  <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 text-center bg-white mb-4 position-relative overflow-hidden">
+    <!-- Top Decorative Subtle Accent -->
+    <div class="position-absolute top-0 start-0 w-100" style="height: 6px; background: linear-gradient(90deg, var(--forest-green), var(--fresh-green), #F6A828);"></div>
+
+    <!-- Celebration Icon -->
+    <div class="mb-3 pt-2">
+      <div class="rounded-circle text-white d-inline-flex align-items-center justify-content-center shadow"
+           style="width: 76px; height: 76px; font-size: 36px; background: linear-gradient(135deg, var(--forest-green), var(--fresh-green));">
+        <i class="bi bi-check-lg"></i>
+      </div>
+    </div>
+
+    <!-- Quick Commerce Badge -->
+    <div class="mb-2">
+      <span class="badge rounded-pill px-3 py-2 fw-bold" style="background: var(--sage); color: var(--forest-green); font-size: 12px; letter-spacing: 0.5px;">
+        <i class="bi bi-lightning-charge-fill me-1" style="color: #F6A828;"></i>10-MINUTE EXPRESS DELIVERY
+      </span>
+    </div>
+
+    <h2 class="fw-bold text-dark mb-2" style="letter-spacing: -0.5px;">Order Placed Successfully!</h2>
+    <p class="text-secondary small mb-4 mx-auto" style="max-width: 480px;">
+      Your groceries are being handpicked and packed at our nearest dark store. Our delivery partner will be at your doorstep shortly.
+    </p>
+
+    <!-- Order Metadata Pill Box -->
+    <div class="p-3 rounded-4 d-inline-flex flex-wrap align-items-center justify-content-center gap-4 mb-4 border" style="background: var(--cream);">
+      <div>
+        <span class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Order ID</span>
+        <strong class="text-dark fs-6">#{{ order.order_number }}</strong>
+      </div>
+      <div class="vr d-none d-sm-block my-1" style="color: var(--border-color);"></div>
+      <div>
+        <span class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Estimated Delivery</span>
+        <strong style="color: var(--fresh-green);" class="fs-6"><i class="bi bi-stopwatch me-1"></i>10–12 Minutes</strong>
+      </div>
+      <div class="vr d-none d-sm-block my-1" style="color: var(--border-color);"></div>
+      <div>
+        <span class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Payment Method</span>
+        <strong class="text-dark fs-6">{{ order.get_payment_method_display }}</strong>
+      </div>
+    </div>
+
+    <!-- Live Order Tracker Stepper -->
+    <div class="p-4 rounded-4 mb-4 text-start border" style="background: #FAFBF9;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0 text-dark small text-uppercase" style="letter-spacing: 0.8px;">
+          <i class="bi bi-geo-alt-fill me-1" style="color: var(--fresh-green);"></i>Live Delivery Progress
+        </h6>
+        <span class="badge rounded-pill px-2 py-1 small fw-semibold" style="background: var(--sage); color: var(--forest-green);">
+          Order Received
+        </span>
+      </div>
+
+      <div class="position-relative py-2">
+        <div class="d-flex justify-content-between text-center position-relative">
+          <!-- Step 1: Received -->
+          <div class="d-flex flex-column align-items-center" style="z-index: 2; width: 70px;">
+            <div class="rounded-circle text-white d-flex align-items-center justify-content-center mb-2 shadow-sm"
+                 style="width: 40px; height: 40px; background: var(--forest-green); font-size: 16px;">
+              <i class="bi bi-receipt"></i>
+            </div>
+            <span class="small fw-bold text-dark" style="font-size: 12px;">Received</span>
+            <span class="text-muted" style="font-size: 10px;">{{ order.created_at|date:"h:i A" }}</span>
+          </div>
+
+          <!-- Step 2: Packing -->
+          <div class="d-flex flex-column align-items-center" style="z-index: 2; width: 70px;">
+            <div class="rounded-circle text-white d-flex align-items-center justify-content-center mb-2 shadow-sm"
+                 style="width: 40px; height: 40px; background: var(--fresh-green); font-size: 16px;">
+              <i class="bi bi-box-seam"></i>
+            </div>
+            <span class="small fw-bold text-dark" style="font-size: 12px;">Packing</span>
+            <span class="text-muted" style="font-size: 10px;">In Progress</span>
+          </div>
+
+          <!-- Step 3: On The Way -->
+          <div class="d-flex flex-column align-items-center" style="z-index: 2; width: 70px;">
+            <div class="rounded-circle bg-white border text-secondary d-flex align-items-center justify-content-center mb-2"
+                 style="width: 40px; height: 40px; font-size: 16px;">
+              <i class="bi bi-bicycle"></i>
+            </div>
+            <span class="small text-secondary" style="font-size: 12px;">On the way</span>
+            <span class="text-muted" style="font-size: 10px;">Partner assigned</span>
+          </div>
+
+          <!-- Step 4: Arrived -->
+          <div class="d-flex flex-column align-items-center" style="z-index: 2; width: 70px;">
+            <div class="rounded-circle bg-white border text-secondary d-flex align-items-center justify-content-center mb-2"
+                 style="width: 40px; height: 40px; font-size: 16px;">
+              <i class="bi bi-house-door"></i>
+            </div>
+            <span class="small text-secondary" style="font-size: 12px;">Delivered</span>
+            <span class="text-muted" style="font-size: 10px;">Doorstep</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items Summary -->
+    <div class="text-start border rounded-4 p-4 mb-4" style="background: var(--white);">
+      <h6 class="fw-bold mb-3 text-dark small text-uppercase" style="letter-spacing: 0.5px;">
+        <i class="bi bi-basket2 me-1" style="color: var(--fresh-green);"></i>Items in Your Basket ({{ order.items.count }})
+      </h6>
+      <div class="d-flex flex-column gap-2">
+        {% for item in order.items.all %}
+        <div class="d-flex justify-content-between align-items-center py-2 {% if not forloop.last %}border-bottom{% endif %}">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 border bg-light p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+              {% if item.product and item.product.image %}
+                <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}" class="w-100 h-100 object-fit-contain rounded-2">
+              {% else %}
+                <span>🛒</span>
+              {% endif %}
+            </div>
+            <div>
+              <span class="fw-semibold text-dark small d-block">{{ item.product_name }}</span>
+              <span class="text-muted" style="font-size: 11px;">Qty: {{ item.quantity }} × ₹{{ item.product_price }}</span>
+            </div>
+          </div>
+          <span class="fw-bold text-dark small">₹{{ item.get_subtotal }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="border-top pt-3 mt-3">
+        <div class="d-flex justify-content-between py-1 text-secondary small">
+          <span>Items Subtotal</span>
+          <span class="fw-semibold text-dark">₹{{ order.subtotal }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1 text-secondary small">
+          <span>Delivery Partner Fee (10-Min Express)</span>
+          <span class="fw-bold text-success">FREE</span>
+        </div>
+        <div class="d-flex justify-content-between fw-bold fs-5 mt-2 pt-2 border-top text-dark">
+          <span>Total Paid</span>
+          <span style="color: var(--forest-green);">₹{{ order.total_amount }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delivery Address Reassurance -->
+    <div class="text-start p-3 rounded-3 border mb-4 d-flex align-items-center gap-3" style="background: var(--cream);">
+      <div class="rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0"
+           style="background: var(--sage); color: var(--forest-green); width: 38px; height: 38px;">
+        <i class="bi bi-geo-alt-fill"></i>
+      </div>
+      <div class="small">
+        <span class="text-muted d-block" style="font-size: 11px;">Delivering to:</span>
+        <strong class="text-dark">{{ order.delivery_full_name }}</strong> · {{ order.delivery_address_line1 }}, {{ order.delivery_city }} ({{ order.delivery_pincode }})
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex flex-wrap justify-content-center gap-3">
+      <a href="{% url 'orders:order_detail' order.order_number %}" class="btn rounded-pill px-4 py-2 fw-semibold"
+         style="background: var(--forest-green); color: var(--white); border: none;">
+        <i class="bi bi-file-earmark-text me-1"></i>View Full Receipt & Track
+      </a>
+      <a href="{% url 'products:home' %}" class="btn rounded-pill px-4 py-2 fw-semibold"
+         style="background: var(--sage); color: var(--forest-green); border: 1px solid var(--fresh-green);">
+        <i class="bi bi-basket me-1"></i>Order More Groceries
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

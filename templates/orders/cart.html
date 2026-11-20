@@ -1,0 +1,300 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Shopping Basket — FreshBasket{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- ═══ 1. BREADCRUMB ═══ -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'products:home' %}" class="text-decoration-none text-muted">
+          <i class="bi bi-house me-1"></i>Home
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'products:product_list' %}" class="text-decoration-none text-muted">
+          Catalogue
+        </a>
+      </li>
+      <li class="breadcrumb-item active fw-semibold" style="color: var(--fb-primary-forest);">
+        Shopping Basket
+      </li>
+    </ol>
+  </nav>
+
+  {% if items %}
+  <div class="row g-4">
+    <!-- ═══ 2. LEFT COLUMN: SHOPPING CART ITEMS ═══ -->
+    <div class="col-lg-8">
+      <!-- Cart Header & Dark Store Delivery Banner -->
+      <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white" style="border: 1px solid var(--fb-border) !important;">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-white"
+                 style="width: 44px; height: 44px; background: var(--fb-primary-forest); font-size: 20px;">
+              <i class="bi bi-basket2-fill"></i>
+            </div>
+            <div>
+              <div class="d-flex align-items-center gap-2">
+                <h4 class="fw-bold mb-0 font-display text-dark" style="letter-spacing: -0.02em;">Shopping Basket</h4>
+                <span class="badge rounded-pill small"
+                      style="background: var(--fb-light-sage); color: var(--fb-primary-forest); border: 1px solid var(--fb-border);">
+                  {{ cart.get_item_count }} item{{ cart.get_item_count|pluralize }}
+                </span>
+              </div>
+              <p class="text-muted small mb-0" style="font-size: 12px;">
+                ⚡ <strong>10–12 Minute Cold-Chain Delivery</strong> from Indiranagar Neighborhood Dark Store
+              </p>
+            </div>
+          </div>
+          <div>
+            <a href="{% url 'products:product_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3" style="font-size: 12.5px;">
+              <i class="bi bi-plus-lg me-1"></i>Add More Items
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Item List Cards -->
+      <div class="d-flex flex-column gap-3 mb-4">
+        {% for item in items %}
+        {% with available=item.product.get_available_stock %}
+        <div class="fb-cart-item-card">
+          <div class="row align-items-center g-3">
+            <!-- Product Image -->
+            <div class="col-auto">
+              <a href="{% url 'products:product_detail' item.product.slug %}" class="fb-cart-img-box text-decoration-none d-block">
+                {% if item.product.image %}
+                  <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                {% else %}
+                  <span class="fs-3">🛒</span>
+                {% endif %}
+              </a>
+            </div>
+
+            <!-- Title & Metadata -->
+            <div class="col">
+              {% if item.product.brand %}
+                <span class="card-prod-brand d-block">{{ item.product.brand }}</span>
+              {% endif %}
+              <a href="{% url 'products:product_detail' item.product.slug %}"
+                 class="fw-bold text-dark text-decoration-none font-display d-block mb-1"
+                 style="font-size: 15px; line-height: 1.3;">
+                {{ item.product.name }}
+              </a>
+              <div class="d-flex align-items-center gap-2 text-muted small" style="font-size: 12px;">
+                <span>{{ item.product.unit_display|default:item.product.unit }}</span>
+                <span>&bull;</span>
+                <span class="fw-semibold text-dark">₹{{ item.product.price }} / unit</span>
+              </div>
+
+              <!-- Compact Substitution Dropdown -->
+              <div class="mt-2 pt-2 border-top d-flex align-items-center gap-2" style="border-color: var(--fb-border-subtle) !important;">
+                <span class="text-muted" style="font-size: 11px;">
+                  <i class="bi bi-arrow-left-right text-success me-1"></i>Substitution:
+                </span>
+                <form method="post" action="{% url 'orders:update_cart' item.id %}" class="d-inline m-0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update">
+                  <input type="hidden" name="quantity" value="{{ item.quantity }}">
+                  <select name="substitution_preference" onchange="this.form.submit()"
+                          class="form-select form-select-sm py-0 px-2 rounded-pill"
+                          style="font-size: 11px; width: auto; font-weight: 600; border-color: var(--fb-border); color: var(--fb-primary-forest);">
+                    <option value="allow" {% if item.substitution_preference == 'allow' %}selected{% endif %}>Allow suitable substitute</option>
+                    <option value="none" {% if item.substitution_preference == 'none' %}selected{% endif %}>Do not substitute (refund)</option>
+                  </select>
+                </form>
+              </div>
+            </div>
+
+            <!-- Stepper, Subtotal & Remove -->
+            <div class="col-12 col-sm-auto text-sm-end d-flex align-items-center justify-content-between justify-content-sm-end gap-3 pt-2 pt-sm-0">
+              <!-- Stepper Controls -->
+              <div class="fb-cart-stepper">
+                <!-- Decrement -->
+                <form method="post" action="{% url 'orders:update_cart' item.id %}" class="d-inline m-0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update">
+                  <input type="hidden" name="quantity" value="{{ item.quantity|add:'-1' }}">
+                  <button type="submit" title="Decrease quantity" aria-label="Decrease">&minus;</button>
+                </form>
+
+                <!-- Value -->
+                <span class="step-val">{{ item.quantity }}</span>
+
+                <!-- Increment (Guarded against available stock) -->
+                {% if item.quantity < available %}
+                  <form method="post" action="{% url 'orders:update_cart' item.id %}" class="d-inline m-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="quantity" value="{{ item.quantity|add:'1' }}">
+                    <button type="submit" title="Increase quantity" aria-label="Increase">&plus;</button>
+                  </form>
+                {% else %}
+                  <button type="button" disabled title="Maximum available stock reached" style="opacity: 0.4; cursor: not-allowed;">&plus;</button>
+                {% endif %}
+              </div>
+
+              <!-- Item Subtotal -->
+              <div class="text-end" style="min-width: 80px;">
+                <div class="fw-bold font-display" style="font-size: 17px; color: var(--fb-primary-forest);">
+                  ₹{{ item.get_subtotal }}
+                </div>
+              </div>
+
+              <!-- Delete / Remove Button -->
+              <form method="post" action="{% url 'orders:update_cart' item.id %}" class="d-inline m-0">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remove">
+                <button type="submit" class="btn-remove-cart" title="Remove item from basket" onclick="return confirm('Remove {{ item.product.name }} from your basket?')">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+
+      <!-- Cold-Chain Assurance Banner -->
+      <div class="card border-0 rounded-4 p-3 mb-4" style="background: var(--fb-light-sage); border: 1px solid var(--fb-border) !important;">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle p-2 bg-white text-success fs-5">
+            <i class="bi bi-shield-check"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-dark small" style="color: var(--fb-primary-forest) !important;">
+              Cold-Chain Temperature Controlled Tote
+            </div>
+            <p class="small text-muted mb-0" style="font-size: 11.5px;">
+              All dairy, fresh produce, and beverages in your order are packed in insulated, food-grade reusable containers maintaining 4°C freshness.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 3. RIGHT COLUMN: ORDER SUMMARY ═══ -->
+    <div class="col-lg-4">
+      <div class="fb-order-summary-card sticky-top" style="top: 85px;">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" style="border-color: var(--fb-border) !important;">
+          <h5 class="fw-bold font-display mb-0" style="color: var(--fb-primary-forest);">
+            Order Summary
+          </h5>
+          <span class="badge rounded-pill bg-light text-secondary border small">{{ cart.get_item_count }} Items</span>
+        </div>
+
+        <!-- Bill Breakdown -->
+        <div class="fb-price-row">
+          <span>Items Subtotal</span>
+          <span class="fw-semibold text-dark">₹{{ subtotal }}</span>
+        </div>
+
+        <div class="fb-price-row">
+          <span>10-Min Cold-Chain Delivery</span>
+          <span class="fw-semibold text-dark">₹{{ delivery_fee }}</span>
+        </div>
+
+        <div class="fb-price-row">
+          <span>Packaging &amp; Handling</span>
+          <span class="fw-bold text-success">FREE</span>
+        </div>
+
+        <!-- Grand Total Row -->
+        <div class="fb-price-row total-row">
+          <span>Total to Pay</span>
+          <span class="font-display fw-bold" style="font-size: 24px; color: var(--fb-primary-forest);">
+            ₹{{ total }}
+          </span>
+        </div>
+
+        <!-- Proceed to Checkout Button -->
+        <div class="mt-4">
+          <a href="{% url 'orders:checkout' %}" class="btn-fb-primary w-100 justify-content-center py-3 fs-6 text-decoration-none shadow-sm">
+            <span>Proceed to Checkout</span>
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+
+        <!-- Continue Shopping Link -->
+        <div class="text-center mt-2">
+          <a href="{% url 'products:product_list' %}" class="btn-fb-secondary w-100 justify-content-center py-2 text-decoration-none small mt-2">
+            <i class="bi bi-cart-plus me-1"></i>Continue Shopping
+          </a>
+        </div>
+
+        <!-- Transaction-Safe Lock Guarantee -->
+        <div class="mt-4 pt-3 border-top" style="border-color: var(--fb-border-subtle) !important;">
+          <div class="p-3 rounded-3" style="background: var(--fb-bg-cream); border: 1px solid var(--fb-border);">
+            <div class="d-flex align-items-center gap-2 small fw-bold mb-1" style="color: var(--fb-primary-forest);">
+              <i class="bi bi-lock-fill text-success"></i>
+              Zero Overselling Guarantee
+            </div>
+            <p class="small text-muted mb-0" style="font-size: 11px; line-height: 1.45;">
+              Stock is transactionally reserved row-by-row in MySQL upon clicking checkout. You will never face out-of-stock cancellations after placing your order.
+            </p>
+          </div>
+        </div>
+
+        <!-- Payment Badges -->
+        <div class="d-flex justify-content-center align-items-center gap-3 text-muted small mt-3 pt-2" style="font-size: 11.5px;">
+          <span><i class="bi bi-cash-stack text-success me-1"></i>Cash on Delivery</span>
+          <span>&bull;</span>
+          <span><i class="bi bi-credit-card text-primary me-1"></i>Simulated Card</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ═══ 4. EMPTY CART EXPERIENCE ═══ -->
+  <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white my-4" style="border: 1px solid var(--fb-border) !important; max-width: 680px; margin: 0 auto;">
+    <div class="mx-auto mb-4 rounded-circle d-flex align-items-center justify-content-center"
+         style="width: 96px; height: 96px; background: var(--fb-light-sage); color: var(--fb-primary-forest); font-size: 44px; box-shadow: 0 4px 16px rgba(23,63,53,0.1);">
+      <i class="bi bi-basket3"></i>
+    </div>
+    <h3 class="fw-bold font-display mb-2" style="color: var(--fb-primary-forest); font-size: 26px;">
+      Your basket is waiting!
+    </h3>
+    <p class="text-muted small mb-4 mx-auto" style="max-width: 440px; font-size: 14px; line-height: 1.6;">
+      Your basket is currently empty. Explore over 30+ farm-fresh fruits, crisp vegetables, wholesome daily dairy, and kitchen staples delivered to your doorstep in 10 minutes.
+    </p>
+
+    <!-- Start Shopping CTA -->
+    <div class="mb-4">
+      <a href="{% url 'products:product_list' %}" class="btn-fb-primary px-4 py-3 fs-6 text-decoration-none shadow-sm d-inline-flex">
+        <i class="bi bi-bag-plus me-2"></i>Start Shopping
+      </a>
+    </div>
+
+    <!-- Quick Department Shortcuts -->
+    <div class="pt-4 border-top" style="border-color: var(--fb-border) !important;">
+      <span class="small text-muted fw-semibold d-block mb-3" style="font-size: 12px; letter-spacing: 0.5px;">
+        POPULAR DEPARTMENTS
+      </span>
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a href="{% url 'products:product_list' %}?category=dairy-eggs" class="btn btn-sm rounded-pill px-3"
+           style="background: var(--fb-bg-cream); color: var(--fb-primary-forest); border: 1px solid var(--fb-border); font-size: 12px; font-weight: 600;">
+          🥛 Dairy &amp; Eggs
+        </a>
+        <a href="{% url 'products:product_list' %}?category=fruits-vegetables" class="btn btn-sm rounded-pill px-3"
+           style="background: var(--fb-bg-cream); color: var(--fb-primary-forest); border: 1px solid var(--fb-border); font-size: 12px; font-weight: 600;">
+          🥦 Fruits &amp; Veggies
+        </a>
+        <a href="{% url 'products:product_list' %}?category=grains-pulses" class="btn btn-sm rounded-pill px-3"
+           style="background: var(--fb-bg-cream); color: var(--fb-primary-forest); border: 1px solid var(--fb-border); font-size: 12px; font-weight: 600;">
+          🌾 Grains &amp; Staples
+        </a>
+        <a href="{% url 'products:product_list' %}?category=snacks-sweets" class="btn btn-sm rounded-pill px-3"
+           style="background: var(--fb-bg-cream); color: var(--fb-primary-forest); border: 1px solid var(--fb-border); font-size: 12px; font-weight: 600;">
+          🍿 Snacks &amp; Munchies
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

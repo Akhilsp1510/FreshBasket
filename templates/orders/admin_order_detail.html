@@ -1,0 +1,436 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Order #{{ order.order_number }} Operations - FreshBasket SaaS Admin{% endblock %}
+
+{% block content %}
+<!-- ═══ BREADCRUMB & HEADER ═══ -->
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2" style="font-size: 13px;">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard:home' %}" class="text-decoration-none text-muted">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'orders:admin_orders' %}" class="text-decoration-none" style="color: var(--fresh-green);">Order Management</a></li>
+      <li class="breadcrumb-item active text-dark fw-semibold" aria-current="page">#{{ order.order_number }}</li>
+    </ol>
+  </nav>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h1 class="fb-admin-greeting-title mb-0">Order Operations: #{{ order.order_number }}</h1>
+        {% if order.status == 'pending' %}
+          <span class="badge badge-order-pending rounded-pill px-3 py-1 small fw-semibold">Pending Confirmation</span>
+        {% elif order.status == 'confirmed' %}
+          <span class="badge badge-order-confirmed rounded-pill px-3 py-1 small fw-semibold">Confirmed</span>
+        {% elif order.status == 'processing' %}
+          <span class="badge badge-order-processing rounded-pill px-3 py-1 small fw-semibold">Processing (Packing)</span>
+        {% elif order.status == 'out_for_delivery' %}
+          <span class="badge badge-order-out-for-delivery rounded-pill px-3 py-1 small fw-semibold">Out for Delivery</span>
+        {% elif order.status == 'delivered' %}
+          <span class="badge badge-order-delivered rounded-pill px-3 py-1 small fw-semibold">Delivered</span>
+        {% elif order.status == 'cancelled' %}
+          <span class="badge badge-order-cancelled rounded-pill px-3 py-1 small fw-semibold">Cancelled</span>
+        {% endif %}
+      </div>
+      <p class="fb-admin-greeting-subtitle mb-0">
+        Placed by <strong>{{ order.delivery_full_name|default:order.user.get_full_name|default:order.user.username }}</strong> on {{ order.created_at|date:"l, F d, Y · h:i A" }}
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'orders:admin_orders' %}" class="btn rounded-pill px-3 py-2 btn-outline-secondary fw-semibold" style="font-size: 13px;">
+        <i class="bi bi-arrow-left me-1"></i> Back to Orders
+      </a>
+      <a href="{% url 'orders:order_detail' order.order_number %}" target="_blank" class="btn rounded-pill px-3 py-2 btn-light border fw-semibold" style="font-size: 13px;">
+        <i class="bi bi-eye me-1"></i> Customer Receipt
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ VISUAL ORDER STATUS PROGRESS TIMELINE ═══ -->
+<div class="fb-admin-table-card p-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="small fw-bold text-dark text-uppercase" style="font-size: 11px; letter-spacing: 0.6px;">
+      <i class="bi bi-signpost-split text-success me-1"></i> Order Fulfillment Progress
+    </span>
+    <span class="text-muted small" style="font-size: 11px;">
+      Last Status Update: <strong>{{ order.updated_at|date:"M d, Y · h:i A" }}</strong>
+    </span>
+  </div>
+
+  {% if order.status == 'cancelled' %}
+    <!-- Cancelled Order Banner -->
+    <div class="alert alert-danger border-0 rounded-4 shadow-sm p-3 mb-0 mt-3 d-flex align-items-center gap-3">
+      <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px; font-size: 20px;">
+        <i class="bi bi-x-octagon-fill"></i>
+      </div>
+      <div>
+        <h6 class="fw-bold text-danger mb-0">Order Cancelled &amp; Inventory Restored</h6>
+        <p class="small text-danger mb-0" style="opacity: 0.85;">
+          This order was cancelled on {{ order.updated_at|date:"M d, Y · h:i A" }}. All reserved physical items were safely restored to warehouse inventory via the transactional restoration engine.
+        </p>
+      </div>
+    </div>
+  {% else %}
+    <!-- 5-Step Milestone Horizontal Timeline -->
+    <div class="fb-timeline">
+      {% for m in milestones %}
+        {% with step_num=forloop.counter %}
+        <div class="fb-timeline-step {% if step_num < current_step %}completed{% elif step_num == current_step %}active{% endif %}">
+          <div class="fb-timeline-icon">
+            {% if step_num < current_step %}
+              <i class="bi bi-check-lg"></i>
+            {% else %}
+              <i class="bi {{ m.icon }}"></i>
+            {% endif %}
+          </div>
+          <div class="fb-timeline-label">{{ m.label }}</div>
+          <div class="fb-timeline-desc">{{ m.description }}</div>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+<!-- ═══ 2-COLUMN MAIN WORKSPACE ═══ -->
+<div class="row g-4">
+  <!-- LEFT COLUMN: Product Items, Summary & Linked Audit Ledger (8 cols) -->
+  <div class="col-lg-8">
+    <!-- Card 1: Product Items Table -->
+    <div class="fb-admin-table-card mb-4">
+      <div class="fb-admin-table-header">
+        <div>
+          <h2 class="fb-admin-table-title">
+            <i class="bi bi-bag-check text-success"></i> Purchased Items ({{ order.items.count }})
+          </h2>
+          <div class="text-muted small" style="font-size: 12px;">Prices and names snapshotted at time of customer checkout</div>
+        </div>
+        <span class="badge rounded-pill bg-light border text-muted small px-3 py-1">
+          {{ order.get_payment_method_display }}
+        </span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Grocery Item</th>
+              <th>Unit Price</th>
+              <th class="text-center">Quantity</th>
+              <th>Item Subtotal</th>
+              <th>Substitution Preference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in order.items.all %}
+            <tr>
+              <!-- Item with Thumbnail -->
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  <div class="rounded-3 border bg-light p-1 d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width: 44px; height: 44px; background: #FAF9F4 !important;">
+                    {% if item.product and item.product.image %}
+                      <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}" class="w-100 h-100 object-fit-contain rounded-2">
+                    {% else %}
+                      <i class="bi bi-bag text-muted fs-5"></i>
+                    {% endif %}
+                  </div>
+                  <div>
+                    <span class="fw-bold text-dark small d-block">{{ item.product_name }}</span>
+                    <span class="text-muted" style="font-size: 11px;">
+                      {{ item.product.category.name }}
+                      {% if item.product.brand %}· {{ item.product.brand }}{% endif %}
+                    </span>
+                    {% if item.substitute_product %}
+                      <div class="text-info small mt-1" style="font-size: 11px;">
+                        <i class="bi bi-arrow-left-right me-1"></i> Substituted with: <strong>{{ item.substitute_name }}</strong>
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+
+              <!-- Unit Price -->
+              <td class="small fw-semibold text-dark">
+                ₹{{ item.product_price }}
+              </td>
+
+              <!-- Quantity -->
+              <td class="text-center fw-bold fs-6 text-dark">
+                {{ item.quantity }}
+              </td>
+
+              <!-- Item Subtotal -->
+              <td>
+                <span class="fw-bold text-dark fs-6">₹{{ item.get_subtotal }}</span>
+              </td>
+
+              <!-- Substitution Policy -->
+              <td>
+                {% if item.substitution_preference == 'allow' %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                    <i class="bi bi-check-circle me-1"></i> Allow Any
+                  </span>
+                {% elif item.substitution_preference == 'specific' %}
+                  <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 small">
+                    <i class="bi bi-bullseye me-1"></i> Specific
+                  </span>
+                {% else %}
+                  <span class="badge bg-light text-muted border rounded-pill px-2 py-1 small">
+                    Do Not Substitute
+                  </span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <!-- Order Financial Summary Footer -->
+          <tfoot>
+            <tr style="background: #FCFDFB; border-top: 1px solid var(--border-color);">
+              <th colspan="3" class="text-end small text-muted pe-3">Subtotal:</th>
+              <th colspan="2" class="small fw-bold text-dark">₹{{ order.subtotal }}</th>
+            </tr>
+            <tr style="background: #FCFDFB;">
+              <th colspan="3" class="text-end small text-muted pe-3">Delivery Fee (Flat Rate):</th>
+              <th colspan="2" class="small text-dark">₹{{ order.delivery_fee }}</th>
+            </tr>
+            <tr style="background: #FAF9F4; border-top: 1.5px solid rgba(23,63,53,0.12);">
+              <th colspan="3" class="text-end fs-5 text-dark pe-3" style="font-family: var(--font-display);">Final Order Total:</th>
+              <th colspan="2" class="fs-4 fw-bold" style="color: var(--forest-green);">₹{{ order.total_amount }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Card 2: Related Inventory Audit Trail -->
+    <div class="fb-admin-table-card">
+      <div class="fb-admin-table-header">
+        <div>
+          <h2 class="fb-admin-table-title">
+            <i class="bi bi-journal-check text-success"></i> Linked Inventory Audit Trail ({{ order.inventory_logs.count }} Entries)
+          </h2>
+          <div class="text-muted small" style="font-size: 12px;">Immutable ledger entries linked to Order #{{ order.order_number }}</div>
+        </div>
+        <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-1 small">
+          Audit Verified
+        </span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Product</th>
+              <th>Movement</th>
+              <th class="text-center">Delta</th>
+              <th>Physical Stock Transition</th>
+              <th>Actor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in order.inventory_logs.all %}
+            <tr>
+              <td class="text-muted small" style="white-space: nowrap;">
+                <i class="bi bi-clock me-1"></i>{{ log.timestamp|date:"M d, H:i:s" }}
+              </td>
+              <td class="small fw-semibold text-dark">{{ log.product.name }}</td>
+              <td>
+                {% if log.change_type == 'sale' %}
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 small">Sale Confirmed</span>
+                {% elif log.change_type == 'cancellation' %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 small">Cancellation Return</span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1 small">{{ log.get_change_type_display }}</span>
+                {% endif %}
+              </td>
+              <td class="text-center fw-bold fs-6 {% if log.quantity_changed > 0 %}text-success{% else %}text-danger{% endif %}">
+                {% if log.quantity_changed > 0 %}+{% endif %}{{ log.quantity_changed }}
+              </td>
+              <td class="small">
+                <div class="d-inline-flex align-items-center gap-1 p-1 px-2 rounded-pill bg-light border">
+                  <span class="text-muted">{{ log.previous_physical_stock }}</span>
+                  <i class="bi bi-arrow-right text-secondary" style="font-size: 10px;"></i>
+                  <span class="fw-bold text-dark">{{ log.new_physical_stock }}</span>
+                </div>
+              </td>
+              <td class="small text-muted">
+                {{ log.performed_by.username|default:"System Engine" }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-4 small">
+                No direct inventory log entries linked to this order record.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: Status Operations & Customer Dossier (4 cols) -->
+  <div class="col-lg-4">
+    <!-- Card 3: Status Transition Operations -->
+    <div class="fb-admin-form-card mb-4">
+      <div class="fb-form-section-title">
+        <i class="bi bi-sliders text-success"></i> Update Order Status
+      </div>
+      <div class="fb-form-section-subtitle">
+        Advance fulfillment progress or manage cancellation with automatic inventory returns.
+      </div>
+
+      <form method="post" id="statusUpdateForm">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-dark">Fulfillment Milestone:</label>
+          <select name="status" class="form-select rounded-pill py-2 border shadow-none" style="font-size: 13.5px; font-weight: 600;">
+            {% for code, label in status_choices %}
+              <option value="{{ code }}" {% if order.status == code %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit" class="btn w-100 rounded-pill py-2 fw-semibold shadow-sm mb-2"
+                style="background: var(--forest-green); color: var(--white); border: none; font-size: 14px;">
+          <i class="bi bi-check-circle me-1"></i> Commit Status Update
+        </button>
+      </form>
+
+      <!-- Quick Action Buttons for standard flow -->
+      {% if order.status == 'pending' %}
+        <form method="post" class="mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="confirmed">
+          <button type="submit" class="btn btn-sm btn-outline-info w-100 rounded-pill py-1 fw-semibold" style="font-size: 12px;">
+            <i class="bi bi-patch-check me-1"></i> Quick Confirm Order
+          </button>
+        </form>
+      {% elif order.status == 'confirmed' %}
+        <form method="post" class="mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="processing">
+          <button type="submit" class="btn btn-sm btn-outline-primary w-100 rounded-pill py-1 fw-semibold" style="font-size: 12px;">
+            <i class="bi bi-box-seam me-1"></i> Start Packing in Warehouse
+          </button>
+        </form>
+      {% elif order.status == 'processing' %}
+        <form method="post" class="mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="out_for_delivery">
+          <button type="submit" class="btn btn-sm btn-outline-success w-100 rounded-pill py-1 fw-semibold" style="font-size: 12px;">
+            <i class="bi bi-truck me-1"></i> Dispatch Out for Delivery
+          </button>
+        </form>
+      {% elif order.status == 'out_for_delivery' %}
+        <form method="post" class="mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="delivered">
+          <button type="submit" class="btn btn-sm btn-success w-100 rounded-pill py-1 fw-semibold text-white" style="font-size: 12px; background: var(--fresh-green); border: none;">
+            <i class="bi bi-check2-circle me-1"></i> Mark Delivered & Complete
+          </button>
+        </form>
+      {% endif %}
+
+      {% if order.can_cancel %}
+        <form method="post" class="mt-2" onsubmit="return confirm('Are you sure you want to cancel Order #{{ order.order_number }}? Physical stock will be automatically restored to warehouse inventory.');">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="cancelled">
+          <button type="submit" class="btn btn-sm btn-outline-danger w-100 rounded-pill py-1 fw-semibold" style="font-size: 12px;">
+            <i class="bi bi-x-circle me-1"></i> Cancel Order & Restore Stock
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+    <!-- Card 4: Customer Dossier & Shipping Information -->
+    <div class="fb-admin-form-card mb-4">
+      <div class="fb-form-section-title">
+        <i class="bi bi-person-lines-fill text-success"></i> Customer Dossier
+      </div>
+      <div class="fb-form-section-subtitle">
+        Recipient delivery details and communication channels.
+      </div>
+
+      <!-- Recipient Profile Badge -->
+      <div class="d-flex align-items-center gap-3 p-3 rounded-4 bg-light border mb-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+             style="width: 44px; height: 44px; background: var(--forest-green); font-size: 16px;">
+          {{ order.user.username|first|upper }}
+        </div>
+        <div>
+          <span class="fw-bold text-dark small d-block">{{ order.delivery_full_name|default:order.user.get_full_name|default:order.user.username }}</span>
+          <span class="text-muted small d-block" style="font-size: 11px;">
+            <i class="bi bi-envelope me-1"></i>{{ order.user.email }}
+          </span>
+          <span class="text-muted small d-block" style="font-size: 11px;">
+            <i class="bi bi-telephone me-1"></i>{{ order.delivery_phone }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Shipping Address -->
+      <label class="small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px; letter-spacing: 0.5px;">Delivery Address</label>
+      <div class="p-3 rounded-3 bg-light border mb-3" style="line-height: 1.5; font-size: 13px;">
+        <i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>{{ order.delivery_full_name }}</strong><br>
+        {{ order.delivery_address_line1 }}<br>
+        {% if order.delivery_address_line2 %}{{ order.delivery_address_line2 }}<br>{% endif %}
+        {{ order.delivery_city }}, {{ order.delivery_state }} — <strong>{{ order.delivery_pincode }}</strong>
+      </div>
+
+      <!-- Customer Instructions / Notes -->
+      {% if order.notes %}
+      <label class="small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px; letter-spacing: 0.5px;">Customer Instructions</label>
+      <div class="p-3 rounded-3 bg-light border mb-0 text-muted fst-italic" style="font-size: 12.5px;">
+        <i class="bi bi-chat-left-quote me-1 text-success"></i>"{{ order.notes }}"
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Card 5: Payment & Transaction Snapshot -->
+    <div class="fb-admin-form-card">
+      <div class="fb-form-section-title">
+        <i class="bi bi-credit-card text-success"></i> Payment Details
+      </div>
+      <div class="fb-form-section-subtitle">
+        Payment gateway status and settlement ledger.
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border mb-2">
+        <span class="small text-muted">Method:</span>
+        <span class="fw-bold text-dark small">{{ order.get_payment_method_display }}</span>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border mb-2">
+        <span class="small text-muted">Payment Status:</span>
+        {% if order.payment and order.payment.status == 'paid' %}
+          <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 small">
+            <i class="bi bi-check-circle-fill me-1"></i> Paid
+          </span>
+        {% else %}
+          <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1 small">
+            <i class="bi bi-hourglass-split me-1"></i> Pending Settlement
+          </span>
+        {% endif %}
+      </div>
+
+      {% if order.payment and order.payment.paid_at %}
+      <div class="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border mb-2">
+        <span class="small text-muted">Settled At:</span>
+        <span class="small text-dark fw-semibold">{{ order.payment.paid_at|date:"M d, Y · h:i A" }}</span>
+      </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border">
+        <span class="small text-muted">Total Paid / Due:</span>
+        <span class="fw-bold text-success fs-6">₹{{ order.total_amount }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

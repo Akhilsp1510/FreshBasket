@@ -1,0 +1,283 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}
+  {% if selected_category %}{{ selected_category.name }} — FreshBasket
+  {% elif query %}Search "{{ query }}" — FreshBasket
+  {% else %}Grocery Catalogue — FreshBasket{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- ═══ 1. BREADCRUMB ═══ -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'products:home' %}" class="text-decoration-none text-muted">
+          <i class="bi bi-house me-1"></i>Home
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'products:product_list' %}" class="text-decoration-none text-muted">
+          Catalogue
+        </a>
+      </li>
+      {% if selected_category %}
+        <li class="breadcrumb-item active fw-semibold" style="color: var(--fb-primary-forest);">
+          {{ selected_category.name }}
+        </li>
+      {% elif query %}
+        <li class="breadcrumb-item active fw-semibold" style="color: var(--fb-primary-forest);">
+          Search: "{{ query }}"
+        </li>
+      {% else %}
+        <li class="breadcrumb-item active fw-semibold" style="color: var(--fb-primary-forest);">
+          All Essentials
+        </li>
+      {% endif %}
+    </ol>
+  </nav>
+
+  <!-- ═══ 2. CATALOGUE EDITORIAL HEADER CARD ═══ -->
+  <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white" style="border: 1px solid var(--fb-border) !important;">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <div class="d-inline-flex align-items-center gap-2 mb-2 px-3 py-1 rounded-pill small"
+             style="background: var(--fb-light-sage); color: var(--fb-primary-forest); font-weight: 700; font-size: 11px;">
+          <i class="bi bi-lightning-charge-fill text-warning"></i>
+          10-MINUTE COLD-CHAIN DISPATCH
+        </div>
+        <h2 class="fw-bold mb-1 font-display" style="color: var(--fb-primary-forest); font-size: 28px; letter-spacing: -0.02em;">
+          {% if selected_category %}
+            {{ selected_category.name }}
+          {% elif query %}
+            Search results for &ldquo;{{ query }}&rdquo;
+          {% else %}
+            Fresh Grocery Catalogue
+          {% endif %}
+        </h2>
+        <p class="text-muted small mb-0" style="max-width: 620px;">
+          {% if selected_category and selected_category.description %}
+            {{ selected_category.description }}
+          {% else %}
+            Handpicked, farm-fresh produce and daily household essentials delivered to your doorstep in 10 minutes with guaranteed inventory availability.
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge rounded-pill px-3 py-2 fw-semibold"
+              style="background: var(--fb-bg-cream); color: var(--fb-primary-forest); border: 1px solid var(--fb-border); font-size: 13px;">
+          <i class="bi bi-box-seam me-1 text-success"></i>
+          {{ page_obj.paginator.count }} item{{ page_obj.paginator.count|pluralize }} found
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3. MOBILE CATEGORY QUICK-PILL STRIP (VISIBLE ON MOBILE ONLY) ═══ -->
+  <div class="d-block d-lg-none mb-3">
+    <div class="d-flex gap-2 overflow-x-auto pb-2" style="scrollbar-width: none;">
+      <a href="{% url 'products:product_list' %}{% if query %}?q={{ query }}{% endif %}"
+         class="btn btn-sm rounded-pill px-3 text-nowrap fw-semibold"
+         style="{% if not selected_category %}background: var(--fb-primary-forest); color: #fff;{% else %}background: #fff; color: var(--fb-text-primary); border: 1px solid var(--fb-border);{% endif %}">
+        All
+      </a>
+      {% for cat in categories %}
+      <a href="{% url 'products:product_list' %}?category={{ cat.slug }}{% if query %}&q={{ query }}{% endif %}"
+         class="btn btn-sm rounded-pill px-3 text-nowrap fw-semibold d-flex align-items-center gap-1"
+         style="{% if selected_category and selected_category.slug == cat.slug %}background: var(--fb-primary-forest); color: #fff;{% else %}background: #fff; color: var(--fb-text-primary); border: 1px solid var(--fb-border);{% endif %}">
+        {{ cat.name }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ═══ 4. FILTER STATUS BAR & SORTING ═══ -->
+  <div class="card border-0 shadow-sm rounded-3 p-3 mb-4 bg-white" style="border: 1px solid var(--fb-border) !important;">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <!-- Active Filter Tags / Chips -->
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="small text-muted fw-semibold" style="font-size: 12px;">Active Filters:</span>
+        {% if selected_category %}
+          <span class="badge rounded-pill px-3 py-2 small d-inline-flex align-items-center gap-2"
+                style="background: var(--fb-light-sage); color: var(--fb-primary-forest); border: 1px solid var(--fb-border);">
+            <span>Category: <strong>{{ selected_category.name }}</strong></span>
+            <a href="{% url 'products:product_list' %}{% if query %}?q={{ query }}{% endif %}" class="text-decoration-none text-danger fw-bold" title="Remove category filter">&times;</a>
+          </span>
+        {% endif %}
+        {% if query %}
+          <span class="badge rounded-pill px-3 py-2 small d-inline-flex align-items-center gap-2"
+                style="background: var(--fb-light-sage); color: var(--fb-primary-forest); border: 1px solid var(--fb-border);">
+            <span>Keyword: &ldquo;<strong>{{ query }}</strong>&rdquo;</span>
+            <a href="{% url 'products:product_list' %}{% if selected_category %}?category={{ selected_category.slug }}{% endif %}" class="text-decoration-none text-danger fw-bold" title="Clear keyword">&times;</a>
+          </span>
+        {% endif %}
+        {% if not selected_category and not query %}
+          <span class="small text-muted fst-italic" style="font-size: 12px;">Showing all departments</span>
+        {% else %}
+          <a href="{% url 'products:product_list' %}" class="small text-danger text-decoration-none ms-2 fw-semibold" style="font-size: 12px;">
+            Reset All
+          </a>
+        {% endif %}
+      </div>
+
+      <!-- Sorting Selector Dropdown -->
+      <form method="get" class="d-flex align-items-center gap-2 m-0">
+        {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+        {% if selected_category %}<input type="hidden" name="category" value="{{ selected_category.slug }}">{% endif %}
+        <label for="sortSelect" class="small text-muted fw-semibold text-nowrap mb-0" style="font-size: 12px;">
+          Sort by:
+        </label>
+        <select id="sortSelect" name="sort" class="form-select form-select-sm rounded-pill py-1 px-3"
+                onchange="this.form.submit()"
+                style="width: 175px; font-weight: 600; font-size: 12.5px; border-color: var(--fb-border); color: var(--fb-primary-forest);">
+          <option value="name" {% if sort == 'name' %}selected{% endif %}>Relevance (A–Z)</option>
+          <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+          <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+          <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest Additions</option>
+        </select>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ 5. MAIN CATALOGUE LAYOUT (SIDEBAR + PRODUCT GRID) ═══ -->
+  <div class="row g-4">
+    <!-- Left Category Navigation Sidebar (Desktop) -->
+    <div class="col-lg-3 d-none d-lg-block">
+      <div class="card border-0 shadow-sm rounded-4 p-3 sticky-top bg-white" style="top: 85px; border: 1px solid var(--fb-border) !important;">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" style="border-color: var(--fb-border) !important;">
+          <h6 class="fw-bold mb-0 font-display" style="color: var(--fb-primary-forest);">
+            <i class="bi bi-grid-3x3-gap-fill text-success me-2"></i>Departments
+          </h6>
+          <span class="badge rounded-pill bg-light text-secondary border small">{{ categories.count }}</span>
+        </div>
+
+        <div class="d-flex flex-column gap-1">
+          <!-- All Categories Option -->
+          <a href="{% url 'products:product_list' %}{% if query %}?q={{ query }}{% endif %}"
+             class="px-3 py-2 rounded-3 text-decoration-none small d-flex align-items-center justify-content-between transition-smooth"
+             style="{% if not selected_category %}background: var(--fb-primary-forest); color: #fff; font-weight: 700;{% else %}color: var(--fb-text-primary); background: transparent;{% endif %}">
+            <span class="d-flex align-items-center gap-2">
+              <i class="bi bi-collection-fill"></i>
+              All Products
+            </span>
+            <span class="badge rounded-pill small"
+                  style="{% if not selected_category %}background: rgba(255,255,255,0.2); color: #fff;{% else %}background: var(--fb-bg-cream); color: var(--fb-text-secondary); border: 1px solid var(--fb-border);{% endif %}">
+              {{ page_obj.paginator.count }}
+            </span>
+          </a>
+
+          <!-- Each Database Category -->
+          {% for cat in categories %}
+          <a href="{% url 'products:product_list' %}?category={{ cat.slug }}{% if query %}&q={{ query }}{% endif %}"
+             class="px-3 py-2 rounded-3 text-decoration-none small d-flex align-items-center justify-content-between transition-smooth"
+             style="{% if selected_category and selected_category.slug == cat.slug %}background: var(--fb-primary-forest); color: #fff; font-weight: 700;{% else %}color: var(--fb-text-primary); background: transparent;{% endif %}">
+            <span class="d-flex align-items-center gap-2">
+              {% if cat.image %}
+                <img src="{{ cat.image.url }}" alt="{{ cat.name }}" width="22" height="22" class="rounded-circle object-fit-cover">
+              {% else %}
+                <i class="bi {{ cat.icon|default:'bi-bag' }}"></i>
+              {% endif %}
+              {{ cat.name }}
+            </span>
+            <span class="badge rounded-pill small"
+                  style="{% if selected_category and selected_category.slug == cat.slug %}background: rgba(255,255,255,0.2); color: #fff;{% else %}background: var(--fb-bg-cream); color: var(--fb-text-secondary); border: 1px solid var(--fb-border);{% endif %}">
+              {{ cat.get_product_count }}
+            </span>
+          </a>
+          {% endfor %}
+        </div>
+
+        <!-- Sidebar Delivery Assurance Note -->
+        <div class="mt-4 pt-3 border-top" style="border-color: var(--fb-border) !important;">
+          <div class="p-3 rounded-3" style="background: var(--fb-bg-cream); border: 1px solid var(--fb-border);">
+            <div class="d-flex align-items-center gap-2 small fw-bold mb-1" style="color: var(--fb-primary-forest);">
+              <i class="bi bi-shield-lock-fill text-success"></i>
+              Safe Stock Lock
+            </div>
+            <p class="small text-muted mb-0" style="font-size: 11px; line-height: 1.4;">
+              Row-level concurrency locking reserves items in real-time. No cancellations due to stockouts.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Grid (3 Columns on Desktop, 2 on Mobile) -->
+    <div class="col-lg-9 col-12">
+      {% if page_obj.object_list %}
+        <div class="row g-3 g-md-4">
+          {% for product in page_obj %}
+            {% include "products/_product_card.html" with col_class="col-6 col-sm-6 col-md-6 col-lg-4" %}
+          {% endfor %}
+        </div>
+
+        <!-- ═══ 6. PAGINATION ═══ -->
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-5" aria-label="Page navigation">
+          <ul class="pagination justify-content-center gap-1">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link rounded-circle border-0 shadow-sm d-flex align-items-center justify-content-center"
+                 style="width: 38px; height: 38px; color: var(--fb-primary-forest); background: #fff;"
+                 href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category.slug }}{% endif %}&sort={{ sort }}">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+              {% if num == page_obj.number %}
+              <li class="page-item active">
+                <span class="page-link rounded-circle border-0 d-flex align-items-center justify-content-center fw-bold text-white shadow-sm"
+                      style="width: 38px; height: 38px; background: var(--fb-primary-forest);">
+                  {{ num }}
+                </span>
+              </li>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link rounded-circle border-0 shadow-sm d-flex align-items-center justify-content-center text-dark"
+                   style="width: 38px; height: 38px; background: #fff;"
+                   href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category.slug }}{% endif %}&sort={{ sort }}">
+                  {{ num }}
+                </a>
+              </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link rounded-circle border-0 shadow-sm d-flex align-items-center justify-content-center"
+                 style="width: 38px; height: 38px; color: var(--fb-primary-forest); background: #fff;"
+                 href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category.slug }}{% endif %}&sort={{ sort }}">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+
+      {% else %}
+        <!-- ═══ 7. ENHANCED EMPTY STATE ═══ -->
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white" style="border: 1px solid var(--fb-border) !important;">
+          <div class="mx-auto mb-3 rounded-circle d-flex align-items-center justify-content-center"
+               style="width: 80px; height: 80px; background: var(--fb-light-sage); color: var(--fb-primary-forest); font-size: 36px;">
+            <i class="bi bi-search"></i>
+          </div>
+          <h4 class="fw-bold font-display mb-2" style="color: var(--fb-primary-forest);">No Matching Groceries Found</h4>
+          <p class="text-muted small mb-4 mx-auto" style="max-width: 440px;">
+            We couldn't find any products matching your selection. Try searching for broader terms like "milk", "rice", "dal", or browse all categories.
+          </p>
+          <div class="d-flex justify-content-center gap-2">
+            <a href="{% url 'products:product_list' %}" class="btn-fb-primary text-decoration-none">
+              <i class="bi bi-basket me-1"></i>View All Products
+            </a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

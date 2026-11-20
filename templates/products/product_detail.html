@@ -1,0 +1,344 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ product.name }} — FreshBasket{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- ═══ 1. BREADCRUMB ═══ -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'products:home' %}" class="text-decoration-none text-muted">
+          <i class="bi bi-house me-1"></i>Home
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'products:product_list' %}" class="text-decoration-none text-muted">
+          Catalogue
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'products:product_list' %}?category={{ product.category.slug }}" class="text-decoration-none text-muted">
+          {{ product.category.name }}
+        </a>
+      </li>
+      <li class="breadcrumb-item active fw-semibold" style="color: var(--fb-primary-forest);">
+        {{ product.name }}
+      </li>
+    </ol>
+  </nav>
+
+  <!-- ═══ 2. MAIN PRODUCT DETAILS HERO CARD ═══ -->
+  <div class="fb-detail-card mb-5">
+    <div class="row g-5 align-items-start">
+      <!-- LEFT COLUMN: Product Image Showcase -->
+      <div class="col-lg-5">
+        <div class="fb-detail-img-box mb-3">
+          <!-- Top Badges Overlay -->
+          <div class="position-absolute top-0 start-0 p-3 d-flex gap-2">
+            <span class="badge rounded-pill px-3 py-1 small"
+                  style="background: var(--fb-light-sage); color: var(--fb-primary-forest); border: 1px solid var(--fb-border); font-weight: 700;">
+              <i class="bi bi-lightning-charge-fill text-warning me-1"></i>10 MINS DELIVERY
+            </span>
+            {% if product.discount_percent > 0 %}
+              <span class="badge rounded-pill px-3 py-1 small text-white fw-bold" style="background: #DC2626;">
+                {{ product.discount_percent }}% OFF
+              </span>
+            {% endif %}
+          </div>
+
+          <!-- Main Product Image -->
+          {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.name }}" id="mainProductImage">
+          {% else %}
+            <span class="display-1">🛒</span>
+          {% endif %}
+        </div>
+
+        <!-- Cold-Chain & Quality Trust Micro-Pills -->
+        <div class="row g-2 text-center">
+          <div class="col-6">
+            <div class="p-2 rounded-3 border bg-light d-flex align-items-center justify-content-center gap-2 small text-muted">
+              <i class="bi bi-snow text-info fs-5"></i>
+              <span style="font-size: 11.5px;">Chilled Storage (4°C)</span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded-3 border bg-light d-flex align-items-center justify-content-center gap-2 small text-muted">
+              <i class="bi bi-patch-check-fill text-success fs-5"></i>
+              <span style="font-size: 11.5px;">100% Quality Checked</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Product Information & Purchase Suite -->
+      <div class="col-lg-7">
+        <!-- Category & Brand Eyebrow -->
+        <div class="d-flex align-items-center gap-2 mb-2">
+          {% if product.brand %}
+            <span class="card-prod-brand mb-0">{{ product.brand }}</span>
+            <span class="text-muted small">&bull;</span>
+          {% endif %}
+          <a href="{% url 'products:product_list' %}?category={{ product.category.slug }}"
+             class="text-decoration-none small fw-semibold" style="color: var(--fb-secondary-fresh);">
+            {{ product.category.name }}
+          </a>
+        </div>
+
+        <!-- Product Title -->
+        <h1 class="fw-bold font-display mb-2" style="color: var(--fb-primary-forest); font-size: 32px; letter-spacing: -0.02em;">
+          {{ product.name }}
+        </h1>
+
+        <!-- Unit / Quantity -->
+        <div class="text-muted fw-semibold mb-3 d-flex align-items-center gap-2" style="font-size: 14px;">
+          <i class="bi bi-box-seam text-secondary"></i>
+          <span>Net Quantity: <strong>{{ product.unit_display|default:product.unit }}</strong></span>
+        </div>
+
+        <!-- Price Section -->
+        <div class="d-flex align-items-baseline gap-3 mb-3 pb-3 border-bottom" style="border-color: var(--fb-border-subtle) !important;">
+          <span class="font-display fw-bold" style="font-size: 36px; color: var(--fb-primary-forest);">
+            ₹{{ product.price }}
+          </span>
+          {% if product.mrp and product.mrp > product.price %}
+            <span class="fs-5 text-muted text-decoration-line-through">
+              ₹{{ product.mrp }}
+            </span>
+            <span class="badge rounded-pill px-2 py-1 small fw-bold text-white" style="background: #DC2626;">
+              Save ₹{{ product.mrp|add:"-product.price"|default:"" }} ({{ product.discount_percent }}% OFF)
+            </span>
+          {% endif %}
+          <span class="small text-muted ms-auto" style="font-size: 11px;">(Inclusive of all taxes)</span>
+        </div>
+
+        <!-- Dynamic Stock Availability Badge -->
+        {% with status=product.get_stock_status available=product.get_available_stock %}
+        <div class="mb-4">
+          {% if status == 'in_stock' %}
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill small"
+                 style="background: var(--fb-light-sage); color: var(--fb-primary-forest); border: 1px solid var(--fb-border); font-weight: 600;">
+              <i class="bi bi-check-circle-fill text-success fs-6"></i>
+              <span>In Stock &bull; <strong>{{ available }} units</strong> ready for 10-minute delivery</span>
+            </div>
+          {% elif status == 'low_stock' %}
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill small"
+                 style="background: var(--fb-accent-amber-bg); color: var(--fb-accent-amber); border: 1px solid rgba(217, 119, 6, 0.2); font-weight: 600;">
+              <i class="bi bi-exclamation-triangle-fill fs-6"></i>
+              <span>Low Stock &bull; Only <strong>{{ available }} units left</strong> in your local dark store</span>
+            </div>
+          {% else %}
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill small"
+                 style="background: var(--fb-danger-bg); color: var(--fb-danger); border: 1px solid rgba(220, 38, 38, 0.2); font-weight: 600;">
+              <i class="bi bi-x-circle-fill fs-6"></i>
+              <span>Currently Out of Stock</span>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Purchase & Substitution Suite -->
+        {% if status != 'out_of_stock' %}
+          <form method="post" action="{% url 'orders:add_to_cart' product.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+            <!-- Quantity & Add to Cart Controls -->
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+              <!-- Custom Quantity Stepper -->
+              <div>
+                <label class="form-label small fw-semibold text-muted d-block mb-1" style="font-size: 11.5px;">Quantity</label>
+                <div class="fb-qty-group">
+                  <button type="button" class="fb-qty-btn" onclick="decrementProductQty()" title="Decrease">
+                    <i class="bi bi-dash"></i>
+                  </button>
+                  <input type="number" name="quantity" id="detailQtyInput" class="fb-qty-input" value="1" min="1" max="{{ available }}" readonly>
+                  <button type="button" class="fb-qty-btn" onclick="incrementProductQty({{ available }})" title="Increase">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="flex-grow-1 pt-3 pt-sm-0 align-self-end">
+                {% if user.is_authenticated %}
+                  <button type="submit" class="btn-fb-primary w-100 justify-content-center py-3 fs-6">
+                    <i class="bi bi-cart3 fs-5"></i>
+                    <span>Add to Cart</span>
+                  </button>
+                {% else %}
+                  <a href="{% url 'accounts:login' %}?next={{ request.get_full_path }}" class="btn-fb-primary w-100 justify-content-center py-3 fs-6 text-decoration-none">
+                    <i class="bi bi-box-arrow-in-right fs-5"></i>
+                    <span>Sign In to Order</span>
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Substitution Preferences Card (College Capstone Innovation Feature) -->
+            <div class="fb-substitute-card mb-4">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-arrow-left-right text-success fs-5"></i>
+                <h6 class="fw-bold mb-0 text-dark small">Substitution Preference</h6>
+              </div>
+              <p class="text-muted small mb-3" style="font-size: 12px; line-height: 1.4;">
+                If stock sells out during packaging, how should the fulfillment dark store handle this item?
+              </p>
+              <div class="d-flex flex-column gap-2">
+                <label class="d-flex align-items-start gap-2 p-2 rounded-2 border bg-white cursor-pointer mb-0">
+                  <input type="radio" name="substitution_preference" value="allow" checked class="mt-1">
+                  <div class="small">
+                    <strong class="text-dark">Allow suitable substitute</strong>
+                    <div class="text-muted" style="font-size: 11px;">Our store picks the closest premium equivalent in {{ product.category.name }}.</div>
+                  </div>
+                </label>
+                <label class="d-flex align-items-start gap-2 p-2 rounded-2 border bg-white cursor-pointer mb-0">
+                  <input type="radio" name="substitution_preference" value="none" class="mt-1">
+                  <div class="small">
+                    <strong class="text-dark">Do not substitute</strong>
+                    <div class="text-muted" style="font-size: 11px;">Remove item and automatically refund to your original payment method.</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </form>
+        {% else %}
+          <!-- Out of Stock Message -->
+          <div class="p-4 rounded-3 border mb-4" style="background: var(--fb-bg-cream); border-color: var(--fb-border) !important;">
+            <div class="d-flex align-items-center gap-2 fw-bold text-dark mb-1">
+              <i class="bi bi-clock-history text-warning fs-5"></i>
+              Item Temporarily Sold Out
+            </div>
+            <p class="small text-muted mb-0">
+              Fresh shipments arrive at our neighborhood dark stores throughout the day. Please check back shortly or explore similar items below.
+            </p>
+          </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Assurance Row -->
+        <div class="row g-3 pt-3 border-top" style="border-color: var(--fb-border-subtle) !important;">
+          <div class="col-4">
+            <div class="d-flex align-items-center gap-2 small text-muted">
+              <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
+              <span style="font-size: 12px;">10-Min Delivery</span>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="d-flex align-items-center gap-2 small text-muted">
+              <i class="bi bi-shield-check text-success fs-5"></i>
+              <span style="font-size: 12px;">Zero Overselling</span>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="d-flex align-items-center gap-2 small text-muted">
+              <i class="bi bi-arrow-repeat text-primary fs-5"></i>
+              <span style="font-size: 12px;">Easy Return</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3. PRODUCT SPECIFICATIONS & DETAILS ═══ -->
+  <div class="row g-4 mb-5">
+    <!-- Description -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100" style="border: 1px solid var(--fb-border) !important;">
+        <h5 class="fw-bold font-display mb-3" style="color: var(--fb-primary-forest);">
+          <i class="bi bi-info-circle text-success me-2"></i>Product Overview
+        </h5>
+        {% if product.description %}
+          <p class="text-secondary small mb-0" style="line-height: 1.7; font-size: 13.5px;">
+            {{ product.description }}
+          </p>
+        {% else %}
+          <p class="text-secondary small mb-0" style="line-height: 1.7; font-size: 13.5px;">
+            Quality guaranteed {{ product.name }} sourced directly from verified local suppliers. Stored under strict hygienic conditions in temperature-controlled fulfillment centers to ensure peak freshness and nutritional value.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Specifications Table -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100" style="border: 1px solid var(--fb-border) !important;">
+        <h5 class="fw-bold font-display mb-3" style="color: var(--fb-primary-forest);">
+          <i class="bi bi-card-checklist text-success me-2"></i>Key Specifications
+        </h5>
+        <table class="fb-spec-table">
+          <tbody>
+            <tr>
+              <td class="text-muted fw-semibold" style="width: 38%;">Category</td>
+              <td class="text-dark fw-semibold">{{ product.category.name }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted fw-semibold">Brand</td>
+              <td class="text-dark fw-semibold">{{ product.brand|default:"FreshBasket Select" }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted fw-semibold">Net Weight / Unit</td>
+              <td class="text-dark fw-semibold">{{ product.unit_display|default:product.unit }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted fw-semibold">Dark Store Guarantee</td>
+              <td class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Row-level inventory locked</td>
+            </tr>
+            <tr>
+              <td class="text-muted fw-semibold">Delivery Window</td>
+              <td class="text-dark fw-semibold">10–12 minutes from order confirmation</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 4. RELATED PRODUCTS IN SAME CATEGORY ═══ -->
+  {% if substitutes %}
+  <section class="mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h3 class="fb-section-title">Similar Items in {{ product.category.name }}</h3>
+        <p class="text-muted small mb-0">Customers who bought {{ product.name }} also ordered these daily essentials</p>
+      </div>
+      <a href="{% url 'products:product_list' %}?category={{ product.category.slug }}"
+         class="fw-bold small text-decoration-none" style="color: var(--fb-secondary-fresh);">
+        View All <i class="bi bi-chevron-right ms-1"></i>
+      </a>
+    </div>
+    <div class="row g-3 g-md-4">
+      {% for rel in substitutes %}
+        {% include "products/_product_card.html" with product=rel col_class="col-6 col-sm-6 col-md-4 col-lg-3" %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function incrementProductQty(max) {
+  const inp = document.getElementById('detailQtyInput');
+  if (inp) {
+    const current = parseInt(inp.value, 10) || 1;
+    if (current < max) {
+      inp.value = current + 1;
+    }
+  }
+}
+
+function decrementProductQty() {
+  const inp = document.getElementById('detailQtyInput');
+  if (inp) {
+    const current = parseInt(inp.value, 10) || 1;
+    if (current > 1) {
+      inp.value = current - 1;
+    }
+  }
+}
+</script>
+{% endblock %}

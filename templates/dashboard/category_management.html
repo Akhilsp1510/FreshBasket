@@ -1,0 +1,294 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Category Taxonomy - FreshBasket SaaS Admin{% endblock %}
+
+{% block content %}
+<!-- ═══ HEADER: TITLE & STATS ═══ -->
+<div class="fb-admin-greeting-bar mb-4">
+  <div>
+    <h1 class="fb-admin-greeting-title">Category Management</h1>
+    <p class="fb-admin-greeting-subtitle">Organize grocery items into discoverable aisles, storefront departments, and navigation taxonomy.</p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <span class="badge rounded-pill px-3 py-2 fw-semibold" style="background: var(--sage); color: var(--forest-green); font-size: 13px;">
+      <i class="bi bi-tags-fill me-1"></i> {{ categories.count }} Categories Configured
+    </span>
+    <a href="{% url 'dashboard:product_management' %}" class="btn rounded-pill px-3 py-2 btn-outline-secondary" style="font-size: 13px; font-weight: 600;">
+      <i class="bi bi-box-seam me-1"></i> View All Products
+    </a>
+  </div>
+</div>
+
+<!-- Form Error Alert if any -->
+{% if form.errors %}
+<div class="alert alert-danger border-0 rounded-4 shadow-sm mb-4 p-3" role="alert">
+  <div class="d-flex align-items-center gap-2 fw-bold mb-1">
+    <i class="bi bi-exclamation-octagon-fill"></i> Please correct the category form errors:
+  </div>
+  <ul class="mb-0 small ps-3">
+    {% for field in form %}
+      {% for error in field.errors %}
+        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+      {% endfor %}
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- ═══ 2-COLUMN TAXONOMY WORKSPACE ═══ -->
+<div class="row g-4">
+  <!-- LEFT COLUMN: Add New Category Form (5 cols on lg) -->
+  <div class="col-lg-5">
+    <div class="fb-admin-form-card position-sticky" style="top: 24px;">
+      <div class="fb-form-section-title">
+        <i class="bi bi-plus-circle text-success"></i> Add New Category
+      </div>
+      <div class="fb-form-section-subtitle">
+        Define a new grocery department with icon taxonomy and display order.
+      </div>
+
+      <form method="post" enctype="multipart/form-data" id="addCategoryForm">
+        {% csrf_token %}
+        
+        <!-- Category Name -->
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-dark">Category Name <span class="text-danger">*</span></label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-dark">Aisle Description</label>
+          {{ form.description }}
+          {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
+        </div>
+
+        <!-- Bootstrap Icon Class with Interactive Live Preview -->
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label small fw-bold text-dark mb-0">Bootstrap Icon Class</label>
+            <!-- Dynamic Icon Preview Badge -->
+            <div id="iconPreviewBadge" class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                 style="width: 28px; height: 28px; background: var(--sage); color: var(--forest-green); font-size: 14px;">
+              <i class="bi bi-tag" id="liveIconElem"></i>
+            </div>
+          </div>
+          {{ form.icon }}
+          <div class="form-text mb-2" style="font-size: 11px;">Type any Bootstrap icon code (e.g. <code>bi-apple</code>) or click a suggestion below:</div>
+          
+          <!-- Quick Icon Suggestion Chips -->
+          <div class="d-flex flex-wrap gap-1">
+            <span class="fb-icon-pill" data-icon="bi-apple"><i class="bi bi-apple text-danger"></i> Fruits</span>
+            <span class="fb-icon-pill" data-icon="bi-egg-fried"><i class="bi bi-egg-fried text-warning"></i> Dairy & Eggs</span>
+            <span class="fb-icon-pill" data-icon="bi-cup-hot"><i class="bi bi-cup-hot text-primary"></i> Beverages</span>
+            <span class="fb-icon-pill" data-icon="bi-flower1"><i class="bi bi-flower1 text-success"></i> Grains & Staples</span>
+            <span class="fb-icon-pill" data-icon="bi-basket2"><i class="bi bi-basket2 text-secondary"></i> Bakery</span>
+            <span class="fb-icon-pill" data-icon="bi-stars"><i class="bi bi-stars text-info"></i> Snacks</span>
+          </div>
+          {% if form.icon.errors %}<div class="text-danger small mt-1">{{ form.icon.errors.0 }}</div>{% endif %}
+        </div>
+
+        <!-- Category Banner / Image (Optional) -->
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-dark">Category Image / Banner <span class="text-muted fw-normal">(Optional)</span></label>
+          {{ form.image }}
+          <div class="form-text" style="font-size: 11px;">Recommended size: 600x400 JPG or WEBP.</div>
+          <!-- Preview container -->
+          <div id="catImgPreviewBox" class="mt-2 d-none">
+            <img src="#" alt="Category preview" id="catImgPreview" class="rounded-3 border shadow-sm" style="max-height: 90px; object-fit: cover;">
+          </div>
+          {% if form.image.errors %}<div class="text-danger small mt-1">{{ form.image.errors.0 }}</div>{% endif %}
+        </div>
+
+        <!-- Sort Order & Active Switch Grid -->
+        <div class="row g-2 mb-4">
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold text-dark">Sort Order</label>
+            {{ form.sort_order }}
+            <div class="form-text" style="font-size: 11px;">Lowest number appears first</div>
+          </div>
+          <div class="col-sm-6 d-flex align-items-end">
+            <div class="p-2 px-3 rounded-3 bg-light border w-100 d-flex align-items-center justify-content-between">
+              <label class="form-check-label small fw-bold text-dark mb-0" for="{{ form.is_active.id_for_label }}">Active</label>
+              <div class="form-check form-switch mb-0">
+                {{ form.is_active }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn w-100 rounded-pill py-2 fw-semibold shadow-sm"
+                style="background: var(--forest-green); color: var(--white); border: none; font-size: 14px;">
+          <i class="bi bi-plus-circle me-1"></i> Add Category
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: Categories Table Card (7 cols on lg) -->
+  <div class="col-lg-7">
+    <div class="fb-admin-table-card">
+      <div class="fb-admin-table-header">
+        <div>
+          <h2 class="fb-admin-table-title">
+            <i class="bi bi-grid text-success"></i> Existing Categories ({{ categories.count }})
+          </h2>
+          <div class="text-muted small" style="font-size: 12px;">Active grocery departments displayed across the storefront</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle table-hover">
+          <thead>
+            <tr>
+              <th>Aisle / Department</th>
+              <th>Catalog Items</th>
+              <th class="text-center">Order</th>
+              <th>Status</th>
+              <th class="text-end pe-4">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cat in categories %}
+            <tr>
+              <!-- Category Name & Icon/Image -->
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  {% if cat.image %}
+                    <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="rounded-3 border" style="width: 44px; height: 44px; object-fit: cover;">
+                  {% elif cat.icon %}
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width: 44px; height: 44px; font-size: 20px; background: var(--sage); color: var(--forest-green);">
+                      <i class="bi {{ cat.icon }}"></i>
+                    </div>
+                  {% else %}
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width: 44px; height: 44px; font-size: 20px; background: #F4F6F2; color: #8C9E90;">
+                      <i class="bi bi-tag"></i>
+                    </div>
+                  {% endif %}
+                  <div>
+                    <a href="{% url 'dashboard:product_management' %}?category={{ cat.id }}" class="fw-bold text-dark text-decoration-none small d-block">
+                      {{ cat.name }}
+                    </a>
+                    {% if cat.description %}
+                      <span class="text-muted text-truncate d-block" style="font-size: 11px; max-width: 220px;">
+                        {{ cat.description }}
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+
+              <!-- Products Count -->
+              <td>
+                <a href="{% url 'dashboard:product_management' %}?category={{ cat.id }}" class="text-decoration-none">
+                  <span class="fb-category-stat-badge">
+                    <i class="bi bi-box-seam"></i> {{ cat.product_count }} items
+                  </span>
+                </a>
+              </td>
+
+              <!-- Sort Order -->
+              <td class="text-center">
+                <span class="badge bg-light text-secondary border rounded-pill px-2 py-1 small">
+                  #{{ cat.sort_order }}
+                </span>
+              </td>
+
+              <!-- Status -->
+              <td>
+                {% if cat.is_active %}
+                  <span class="badge rounded-pill px-2 py-1 small" style="background: var(--sage); color: var(--forest-green);">
+                    <i class="bi bi-check-circle-fill me-1" style="font-size: 9px;"></i> Active
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1 small">
+                    Inactive
+                  </span>
+                {% endif %}
+              </td>
+
+              <!-- Actions -->
+              <td class="text-end pe-4">
+                <a href="{% url 'dashboard:edit_category' cat.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold" style="font-size: 12px;">
+                  <i class="bi bi-pencil me-1"></i> Edit
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-5">
+                <div class="p-4 text-center">
+                  <i class="bi bi-tags text-muted" style="font-size: 48px; opacity: 0.4;"></i>
+                  <h5 class="fw-bold text-dark mt-2 mb-1">No Categories Found</h5>
+                  <p class="text-muted small mb-0">Use the form on the left to create your first grocery category.</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ INTERACTIVE ICON CHIPS & IMAGE PREVIEW JAVASCRIPT ═══ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const iconInput = document.getElementById('categoryIconInput');
+  const liveIconElem = document.getElementById('liveIconElem');
+  const iconPills = document.querySelectorAll('.fb-icon-pill');
+
+  function updateIconPreview(iconClass) {
+    if (!liveIconElem) return;
+    const cleanClass = iconClass.trim();
+    if (cleanClass) {
+      liveIconElem.className = 'bi ' + cleanClass;
+    } else {
+      liveIconElem.className = 'bi bi-tag';
+    }
+  }
+
+  if (iconInput) {
+    iconInput.addEventListener('input', function() {
+      updateIconPreview(this.value);
+    });
+
+    // Preset chips click
+    iconPills.forEach(pill => {
+      pill.addEventListener('click', function() {
+        const selectedIcon = this.getAttribute('data-icon');
+        iconInput.value = selectedIcon;
+        updateIconPreview(selectedIcon);
+      });
+    });
+  }
+
+  // Category Image Preview
+  const catImgInput = document.querySelector('input[type="file"][name="image"]');
+  const catImgPreviewBox = document.getElementById('catImgPreviewBox');
+  const catImgPreview = document.getElementById('catImgPreview');
+
+  if (catImgInput && catImgPreviewBox && catImgPreview) {
+    catImgInput.addEventListener('change', function() {
+      if (this.files && this.files[0]) {
+        const file = this.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          catImgPreview.src = e.target.result;
+          catImgPreviewBox.classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        catImgPreviewBox.classList.add('d-none');
+      }
+    });
+  }
+});
+</script>
+{% endblock %}
